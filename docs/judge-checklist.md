@@ -1,65 +1,65 @@
 # Judge Checklist — EcoPulse Submission
 
+Every box below is verifiable against the current code. Paths are clickable from the repo root.
+
 ## Axis 1: Code Quality
 
-- [x] Monorepo with clear boundaries: `frontend/`, `services/gateway/`, `services/agents/`, `packages/`
-- [x] TypeScript strict mode — `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`
-- [x] Python mypy `--strict` throughout
-- [x] Pydantic v2 for all data shapes (no raw dicts across service boundaries)
-- [x] 5 ADRs: see `docs/adr/001-005.md`
-- [x] Conventional Commits enforced via commitlint
-- [x] Shared schemas: `packages/schemas/models.py` + `packages/schemas/models.ts` (single source of truth)
-- [x] Architecture diagram: `docs/architecture.md`
+- [x] Monorepo with clear boundaries: `frontend/`, `services/gateway/`, `services/agents/`, `packages/`, `docs/`, `infra/`
+- [x] TypeScript strict mode — `strict`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess` (`frontend/tsconfig.json`)
+- [x] Python `mypy --strict` throughout (`[tool.mypy] strict = true` in each service `pyproject.toml`)
+- [x] Pydantic v2 for all data shapes — no raw dicts across service boundaries (`packages/schemas/models.py`)
+- [x] 5 ADRs documenting *why*: `adr/001-emissions-engine-separation.md` … `adr/005-workload-identity-federation.md`
+- [x] Conventional Commits enforced via commitlint (`.commitlintrc.json`)
+- [x] DRY shared schemas — one contract mirrored Python↔TS: `packages/schemas/models.py` ↔ `models.ts` (ADR-004)
+- [x] No committed build artifacts or dead duplicates — `.cloudrun/`, `__pycache__/`, `*.tsbuildinfo`, `*.log` all ignored
+- [x] Architecture diagram + decision log: `docs/architecture.md`
 
 ## Axis 2: Security
 
-- [x] Zero hardcoded secrets — gitleaks runs on every CI push
-- [x] All secrets via Google Secret Manager (SM_* env var references only)
-- [x] Workload Identity Federation — no service account JSON keys (ADR-005)
-- [x] Firestore queries always `.where("user_id", "==", uid)` — `services/gateway/app/routes/activities.py`
+- [x] Zero hardcoded secrets — gitleaks runs on every CI push (`.github/workflows/ci.yml`)
+- [x] All secrets via Google Secret Manager — `GEMINI_API_KEY` mounted as a Cloud Run secret env var, never in code
+- [x] Workload Identity Federation for CI deploys — no service-account JSON keys (ADR-005)
+- [x] User-scoped by construction — every gateway route carries an authenticated `user_id`; the mandatory Firestore pattern (`.where("user_id","==",uid)`) is specified in `.claude/rules/security.md` + `docs/threat-model.md`. The live demo holds **no cross-user data** (in-memory store, starts empty)
 - [x] EXIF stripping on all uploaded images — `services/gateway/app/routes/upload.py`
-- [x] Prompt injection defence — user content in `<user_content>` delimiters — `services/agents/app/prompts/`
-- [x] All agent output validated against Pydantic schemas (fail closed) — `services/agents/app/agents/`
-- [x] LLM-claimed saving_pct overridden with engine-verified value — `services/agents/app/agents/coach.py`
+- [x] Prompt-injection defence — user content wrapped in `<user_content>` delimiters (`services/agents/app/prompts/`, and `frontend/lib/gemini-vision.ts` for the live hot path)
+- [x] All LLM/agent output validated + coerced before use (fail closed) — `services/agents/app/agents/`, `frontend/lib/gemini-vision.ts`
+- [x] LLM numeric claims never trusted — every CO₂e recomputed by the deterministic engine; unmatched items count as 0
 - [x] Security headers on all responses (CSP, X-Frame-Options, HSTS) — `services/gateway/app/middleware.py`
 - [x] OWASP Top-10 mapping: `docs/threat-model.md`
 
 ## Axis 3: Efficiency
 
-- [x] Gemini Flash on hot path (<3s), Pro on batch only — enforced in `services/agents/app/agents/`
-- [x] Deterministic Emissions Engine — no LLM arithmetic, pure Python — `packages/emissions/engine.py`
-- [x] Three cache tiers (Redis factors + image hash + scenarios) — `services/agents/app/cache.py`
-- [x] SSE streaming — first items appear within ~1s of request
-- [x] Lighthouse CI budget: ≥95 performance, ≥95 accessibility — `.lighthouserc.json`
-- [x] Next.js standalone output for minimal Docker image
+- [x] Gemini **2.5 Flash** on the hot path (<3s); **2.5 Flash-Lite** as automatic fallback / batch coach — never Pro on the hot path
+- [x] Deterministic Emissions Engine — no LLM arithmetic, pure functions — `packages/emissions/engine.py` (TS port: `frontend/lib/emissions/`)
+- [x] Three cache tiers (Redis factors ∞TTL + image-hash semantic cache + scenario cache) — `services/agents/app/cache.py`
+- [x] SSE streaming — first identified items / chat tokens appear within ~1s
+- [x] Lighthouse CI budget ≥95 performance & accessibility (`.lighthouserc.json`); initial-JS bundle gate <150KB in CI
+- [x] Next.js standalone output for a minimal Docker image (`frontend/Dockerfile`)
 
 ## Axis 4: Testing
 
-- [x] Coverage ≥85% enforced in CI (`--cov-fail-under=85` in `pyproject.toml`)
-- [x] Emissions Engine 100% unit test coverage — `packages/emissions/tests/test_engine.py`
-- [x] Eval suite: 20 labeled fixtures — `services/agents/tests/evals/fixtures/meal_fixtures.json`
-- [x] Accuracy target: ≥90% item identification — `test_extraction_accuracy.py`
-- [x] Golden-file pattern (VCR) for LLM tests — cassettes in `services/agents/tests/cassettes/`
-- [x] Schema conformance tests — Pydantic validation at every agent boundary
-- [x] Playwright E2E + axe-core accessibility audit
-- [x] Injection test cases in `services/gateway/tests/test_health.py`
+- [x] Coverage ≥85% enforced in CI (`--cov-fail-under=85`; frontend coverage gate in `ci.yml`)
+- [x] Emissions Engine unit-tested — `packages/emissions/tests/test_engine.py` (Python) + `frontend/__tests__/emissions.test.ts` (TS)
+- [x] Eval suite: 20 labeled fixtures with ground-truth CO₂e — `services/agents/tests/evals/fixtures/meal_fixtures.json`
+- [x] Item-identification accuracy target ≥90% — `services/agents/tests/evals/test_extraction_accuracy.py`
+- [x] Golden-file (VCR) pattern via `pytest-recording` — cassettes recorded from the fixtures on first run; CI replays offline (no live LLM calls)
+- [x] Component tests (Vitest + RTL) for UI primitives + the dashboard — `frontend/__tests__/`
+- [x] Playwright E2E + axe-core accessibility audit (`e2e/smoke.spec.ts`, `playwright.config.ts`)
 
 ## Axis 5: Accessibility
 
 - [x] WCAG 2.2 AA target throughout
-- [x] axe-core zero violations in CI (Playwright E2E includes axe audit)
-- [x] `prefers-reduced-motion` gates on ALL animations — `useReducedMotion()` in every animated component
-- [x] 3D Globe → 2D PieChart fallback under reduced motion — `components/Globe.tsx`
-- [x] ARIA live regions: activity feed, chat streaming, camera overlay results
-- [x] Full keyboard navigation — every interactive element reachable via Tab
-- [x] Timeline scrubber with arrow key support + ARIA `valuetext`
-- [x] Modal focus trap in CameraOverlay
-- [x] Skip-to-content link in root layout
-- [x] Semantic landmarks: `<main>`, `<nav>`, `<section aria-label>`, `<header>`
+- [x] axe-core **zero violations** on `/` and `/dashboard` — `frontend/scripts/axe-audit.mjs` (+ Playwright axe in E2E)
+- [x] `prefers-reduced-motion` gates **all** motion — the animated carbon-pulse canvas (`components/landing/CarbonPulse.tsx`), GSAP scroll reveals (`lib/useGsap.ts`), and all Recharts (`isAnimationActive={false}`) skip animation; data stays fully present as text/SVG
+- [x] ARIA live regions for streaming output — camera/scan results, activity feed, chat (`aria-live`)
+- [x] Full keyboard navigation — every interactive control (Snap / Upload / Describe, chat, breakdown disclosure) reachable and operable via keyboard
+- [x] Modal focus management in the scan/camera overlay — `components/CameraOverlay.tsx`
+- [x] Skip-to-content link + semantic landmarks (`<header>`, `<main>`, `<nav>`, labelled `<section>`s) — `frontend/app/layout.tsx`
+- [x] 4.5:1 contrast tokens enforced in `tailwind.config.ts`
 
 ## Demo Readiness
 
-- [x] One-command local setup: `docker compose up`
-- [x] MSW mocks work without backend (frontend fully functional offline)
-- [x] Cloud Run deploy: `bash infra/gcloud_deploy.sh`
-- [x] Three WOW features: Snap-to-Carbon, Parallel-You Simulator, Carbon Conversations
+- [x] Live on Cloud Run: https://ecopulse-frontend-593919045544.us-central1.run.app
+- [x] One-command local setup: `docker compose up` (frontend + gateway)
+- [x] Graceful degradation — honest "rate-limited" states + offline lexical parser when the free-tier Gemini quota is exhausted
+- [x] Three WOW features: **Snap-to-Carbon** (photo → annotated CO₂e), **Transparent Engine** (`quantity × DEFRA factor` shown for every number), **Carbon Conversations** (grounded Q&A over the user's own data)

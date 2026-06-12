@@ -82,7 +82,7 @@ async def generate_nudge(
         import google.generativeai as genai  # type: ignore[import-untyped]
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-pro",  # Pro for quality on batch path
+            model_name="gemini-2.5-flash-lite",  # Flash-Lite — cost-optimised batch path
             system_instruction=SYSTEM_PROMPT,
             generation_config=genai.GenerationConfig(
                 response_mime_type="application/json",

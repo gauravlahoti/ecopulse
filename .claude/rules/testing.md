@@ -27,7 +27,7 @@ paths: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test_*.py", "evals/
 - Eval results saved as CI artifacts in `evals/results/`
 
 ## E2E (Playwright)
-- Must include a full keyboard-only user journey: log activity → view globe → use simulator
+- Must include a full keyboard-only user journey: log an activity → view the dashboard → ask Carbon Conversations
 - Record a video artifact of the demo path for the submission
 - Accessibility: run axe-core assertions on every page — zero violations required
 
@@ -36,8 +36,8 @@ paths: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/test_*.py", "evals/
 # DO: record responses, replay in CI
 @pytest.mark.vcr()
 def test_ingest_agent_meal_photo():
-    result = ingest_agent.process(fixture_image("burger.jpg"))
-    assert result.items[0].name == "beef burger"
+    result = ingest_agent.process(fixture_image("biryani.jpg"))
+    assert result.items[0].name == "chicken biryani"
 
 # DON'T: hit live Gemini in CI
 def test_bad():

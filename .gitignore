@@ -8,6 +8,7 @@ node_modules/
 out/
 dist/
 build/
+*.tsbuildinfo
 __pycache__/
 *.pyc
 *.pyo
@@ -15,6 +16,9 @@ __pycache__/
 .Python
 *.egg-info/
 .eggs/
+
+# agents-cli / gcloud deploy staging (regenerated on every deploy — never commit)
+.cloudrun/
 
 # Environment — NEVER commit real values
 .env

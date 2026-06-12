@@ -14,11 +14,11 @@ graph TB
 
     subgraph "AI Agents — Cloud Run"
         ORCH["Orchestrator\n(ADK Session)"]
-        INGEST["Ingest Agent\nGemini 1.5 Flash\n<3s hot path"]
+        INGEST["Ingest Agent\nGemini 2.5 Flash\n<3s hot path"]
         ANALYST["Analyst Agent\nDeterministic Engine\n(no LLM math)"]
-        COACH["Coach Agent\nGemini 1.5 Pro\nWeekly batch"]
+        COACH["Coach Agent\nGemini 2.5 Flash-Lite\nWeekly batch"]
         FORECAST["Forecast Agent\nDeterministic\n(no LLM)"]
-        CONVO["Conversation Agent\nGemini 1.5 Flash\nSSE streaming"]
+        CONVO["Conversation Agent\nGemini 2.5 Flash\nSSE streaming"]
     end
 
     subgraph "Emissions Engine — shared package"
@@ -58,11 +58,13 @@ graph TB
 
 | Agent | Model | Path | Latency target |
 |---|---|---|---|
-| Ingest | Gemini 1.5 Flash | Hot (user-facing) | <3s p95 |
+| Ingest | Gemini 2.5 Flash | Hot (user-facing) | <3s p95 |
 | Analyst | None (deterministic) | Hot (user-facing) | <100ms |
 | Forecast | None (deterministic) | Hot (user-facing) | <1s (cached) |
-| Conversation | Gemini 1.5 Flash | Hot (streaming SSE) | <1.5s first token |
-| Coach | Gemini 1.5 Pro | Batch (weekly cron) | Quality > speed |
+| Conversation | Gemini 2.5 Flash | Hot (streaming SSE) | <1.5s first token |
+| Coach | Gemini 2.5 Flash-Lite | Batch (weekly cron) | Cost-optimised batch |
+
+> **Model policy:** Flash on every user-facing hot path; the lighter Flash-Lite for batch coaching and as the automatic hot-path fallback when a model is rate-limited. Pro is never used on the hot path. The live frontend calls Gemini directly with the same Flash → Flash-Lite policy (`frontend/lib/gemini-vision.ts`).
 
 ## Three Cache Tiers
 
@@ -114,8 +116,16 @@ Numeric claims → re-validated against Emissions Engine
 
 | ADR | Decision |
 |---|---|
-| [ADR-001](adr/001-005.md#adr-001) | Emissions Engine separated from LLM agents |
-| [ADR-002](adr/001-005.md#adr-002) | Gemini Flash on hot path, Pro on batch only |
-| [ADR-003](adr/001-005.md#adr-003) | Firestore with mandatory user_id scoping |
-| [ADR-004](adr/001-005.md#adr-004) | npm workspaces + shared Python packages monorepo |
-| [ADR-005](adr/001-005.md#adr-005) | Workload Identity Federation — zero SA keys |
+| [ADR-001](adr/001-emissions-engine-separation.md) | Emissions Engine separated from LLM agents (LLM identifies, code calculates) |
+| [ADR-002](adr/002-gemini-model-routing.md) | Gemini Flash on the hot path, lighter model for batch |
+| [ADR-003](adr/003-firestore-over-cloud-sql.md) | Firestore with mandatory user_id scoping |
+| [ADR-004](adr/004-monorepo-structure.md) | npm workspaces + shared Python packages monorepo |
+| [ADR-005](adr/005-workload-identity-federation.md) | Workload Identity Federation — zero SA keys |
+
+## Implemented vs. designed
+
+The diagram above is the **designed target topology**. What is **live today** (the submitted demo):
+
+- **Frontend (live, Cloud Run).** Next.js 15 app; its server-only Route Handlers (`frontend/app/api/v1/*`) hold the Gemini key and call Gemini **directly** with the Flash → Flash-Lite policy, then recompute every CO₂e with the deterministic **TypeScript** engine (`frontend/lib/emissions/`).
+- **ADK coordinator (deployed, Cloud Run).** `services/agents/ecopulse_agents/` — the coordinator/delegation agent packaged via `agents-cli`; embodies the same "LLM identifies, code calculates" rule server-side. The live hot path bypasses it for free-tier-quota resilience (see ADR-002 / README §4 note).
+- **Gateway, Firestore, Redis, GCS, Firebase Auth, WIF** are the production-hardening layer: the FastAPI gateway (`services/gateway/`) ships real security middleware (CSP/HSTS, EXIF stripping) and is tested in CI; Firestore/Redis/GCS wiring is specified (rules + threat model) but the demo runs on an in-memory store with no cross-user data.

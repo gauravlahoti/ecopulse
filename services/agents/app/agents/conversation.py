@@ -47,7 +47,9 @@ async def stream_conversation(
 
     api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not api_key:
-        yield from _mock_stream(user_message, relevant_activities)
+        # Delegate to the async mock generator (can't use `yield from` inside `async def`).
+        async for event in _mock_stream(user_message, relevant_activities):
+            yield event
         return
 
     activity_context = _build_activity_context(relevant_activities)
@@ -67,7 +69,7 @@ async def stream_conversation(
         import google.generativeai as genai  # type: ignore[import-untyped]
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.5-flash",
             system_instruction=SYSTEM_PROMPT,
             generation_config=genai.GenerationConfig(
                 temperature=0.3,

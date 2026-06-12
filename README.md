@@ -15,10 +15,16 @@ AI coach that recommends — from *your* data — how to cut it.
 
 ## 1. The vertical — Sustainability / personal carbon footprint
 
+> **Problem statement:** help people **reduce their carbon footprint through simple, personalised insights.**
+
+EcoPulse answers it on three pillars:
+
+- **Simple** — log the way you'd tell a friend: **Snap** a meal, **Upload** a photo, or **Describe** an activity ("Mumbai to Delhi by car"). ~3 seconds, no forms, no spreadsheets.
+- **Personalised** — the AI Coach and Carbon Conversations speak only from *your* logged data (your biggest source, your trend) — not generic tips.
+- **Insight you can act on** — every number is transparent and trustworthy (`quantity × DEFRA factor`), paired with a concrete swap, an offset action, and a 12-month trajectory, so awareness turns into *reduction*.
+
 People can't reduce what they can't measure, and existing trackers are either tedious
-(manual spreadsheets) or untrustworthy (black-box numbers). EcoPulse targets **everyday
-carbon awareness**: frictionless multimodal logging + transparent, science-backed numbers +
-personalised, AI-generated guidance.
+(manual spreadsheets) or untrustworthy (black-box numbers). EcoPulse removes both frictions.
 
 **Problem → how EcoPulse solves it:**
 
@@ -42,9 +48,10 @@ So even when the model is wrong about a number, the *math* is always correct and
 UI's "How this was calculated" panel renders the exact `quantity × DEFRA factor = kg CO₂e` for
 every item, with the source — the LLM's output is never trusted for figures.
 
-Engine: [`frontend/lib/emissions/`](frontend/lib/emissions/) (TypeScript port of the Python
-[`services/agents/.../emissions/engine.py`](services/agents/ecopulse_agents/emissions/engine.py),
-sharing the same `defra_2024.json` factor file).
+Engine: the canonical Python source is [`packages/emissions/engine.py`](packages/emissions/engine.py)
+(100% unit-tested); the live frontend runs a faithful TypeScript port,
+[`frontend/lib/emissions/`](frontend/lib/emissions/), so it can recompute every figure standalone.
+Both read the same bundled `defra_2024.json` factor table.
 
 ## 3. How the solution works
 
@@ -134,22 +141,27 @@ The dashboard starts **empty** and is built entirely from what the user logs —
 
 ```
 ecopulse/
-├── frontend/                      Next.js 15 (App Router) · TypeScript strict · Tailwind
+├── frontend/                      Next.js 15 (App Router) · TypeScript strict · Tailwind — the live app
 │   ├── app/
 │   │   ├── page.tsx               Landing — GSAP scroll storytelling, animated carbon pulse
 │   │   ├── dashboard/page.tsx     Dashboard — input hero, intelligence, charts, coach
-│   │   └── api/v1/                Route handlers (server-only): ingest/image, ingest/text,
-│   │                              coach/nudge, chat — all call Gemini + the engine
+│   │   └── api/v1/                Route handlers (server-only BFF): ingest/image, ingest/text,
+│   │                              coach/nudge, chat, activities — hold the key, call Gemini + engine
 │   ├── lib/
-│   │   ├── emissions/             ★ Deterministic DEFRA engine (pure, tested)
+│   │   ├── emissions/             ★ Deterministic DEFRA engine (TS port, tested)
 │   │   ├── gemini-vision.ts       Server-only Gemini client (vision/text/coach/chat + fallback)
-│   │   ├── useGsap.ts             Reduced-motion-safe GSAP reveal helper
 │   │   └── store.ts               Zustand app state
-│   ├── components/                UI (EmissionBreakdown, CameraOverlay, dashboard/*, …)
-│   └── scripts/                   axe-audit.mjs, shots.mjs, verify-browser.mjs (headless Chrome)
-├── services/agents/               Google ADK agents + the original Python emissions engine
-├── specs/                         Product & sprint specs (gitignored)
-└── docs/                          ADRs, threat model, a11y notes
+│   ├── components/                UI (EmissionBreakdown, CameraOverlay, dashboard/*, ui/*, …)
+│   └── scripts/                   axe-audit.mjs + headless-Chrome verifiers
+├── packages/                      ★ DRY shared code — one source of truth (ADR-004)
+│   ├── emissions/                 Canonical Python engine + DEFRA factors + 100% unit tests
+│   └── schemas/                   models.py (Pydantic) ↔ models.ts — the API contract
+├── services/
+│   ├── agents/                    ADK coordinator (`ecopulse_agents/`) + FastAPI reference (`app/`) + eval suite
+│   └── gateway/                   FastAPI gateway — auth, security headers (CSP/HSTS), EXIF stripping
+├── docs/                          architecture · 5 ADRs · threat model · a11y · judge checklist
+├── infra/                         Cloud Run deploy script
+└── specs/                         Product & sprint specs (gitignored — kept local)
 ```
 
 ## 6. Running it

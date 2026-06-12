@@ -1,6 +1,13 @@
 /**
- * Frontend type definitions — mirrors packages/schemas/models.ts.
- * Source of truth is the Python Pydantic models; keep in sync on schema changes.
+ * Frontend type definitions.
+ *
+ * The canonical API contract lives in `packages/schemas/models.py` (Pydantic) and is
+ * mirrored to TypeScript in `packages/schemas/models.ts` (see ADR-004). This file is the
+ * **client-side projection** of that contract: the subset of shapes the browser actually
+ * consumes (`ActivityCategory`, `IdentifiedItem`, `ActivityRecord`, `CoachNudge`,
+ * `AgentStreamEvent`) plus a few view-only types that never cross the wire (`ChatMessage`).
+ * Shared shapes are kept structurally identical to the canonical models — change them there
+ * first, then here.
  */
 
 export type ActivityCategory =

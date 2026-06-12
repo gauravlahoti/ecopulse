@@ -1,6 +1,0 @@
-google-adk==1.0.0
-google-genai>=1.0.0
-pydantic>=2.7
-# Transitive deps of google-adk that are not always resolved in a clean image:
-deprecated>=1.2
-python-dotenv>=1.0

@@ -7,15 +7,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **EcoPulse** — Agentic carbon intelligence platform for the Google PromptWars hackathon.
 Tagline: "Fitbit for your carbon footprint, with an AI coaching staff that works while you sleep."
 
-All specs live in `/specs/`. Read them before implementing anything.
-Current state: specs complete, **zero implementation code** — build Sprint 1 → 2 → 3 → 4 in order.
+Product specs live in `/specs/` (kept local / gitignored).
+Current state: **implemented and deployed** — the Next.js frontend is live on Cloud Run, the
+deterministic emissions engine + the ADK coordinator agent are built, and the CI gates (lint,
+type-check, ≥85% coverage, axe, build) are wired.
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 15 (App Router), React Three Fiber, Tailwind CSS, Framer Motion, TypeScript strict |
-| Backend | FastAPI (Python 3.12), Google ADK, Gemini 3.5 Flash/Pro |
+| Frontend | Next.js 15 (App Router), GSAP + Canvas 2D, Recharts, Tailwind CSS, Framer Motion, TypeScript strict |
+| Backend | FastAPI (Python 3.12), Google ADK, Gemini 2.5 Flash / Flash-Lite |
 | Data | Firestore, Redis (Memorystore), Cloud Storage |
 | Infra | Cloud Run, Docker (distroless), GitHub Actions, Workload Identity Federation |
 | Testing | Vitest + RTL, pytest + Hypothesis, Playwright, axe-core |
@@ -53,8 +55,8 @@ bash infra/gcloud_deploy.sh
 The Emissions Engine is a pure-function Python module with bundled DEFRA/EPA emission factors. Gemini identifies items and quantities; `calculate_co2e()` does all math. This is a core differentiator for the judges.
 
 **Agent routing:**
-- Hot path (user-facing, <3s): Gemini 3.5 Flash (Ingest + Analyst + Forecast agents)
-- Batch (weekly, quality > speed): Gemini 3.5 Pro (Coach agent via Cloud Run Jobs)
+- Hot path (user-facing, <3s): Gemini 2.5 Flash (Ingest + Conversation); Analyst + Forecast are deterministic (no LLM)
+- Batch + fallback (Coach; and the hot path when a model is rate-limited): Gemini 2.5 Flash-Lite
 - Never use Pro on the hot path
 
 **Three cache tiers (all required):**
@@ -92,15 +94,15 @@ All code decisions should be optimized against these 5 axes:
 ## Sprint Order
 
 1. `specs/02-sprints/sprint-1-foundation/spec.md` — CI/CD, Docker, monorepo scaffolding (Days 1-2)
-2. `specs/02-sprints/sprint-2-frontend-accessibility/spec.md` — Globe, UI, WCAG 2.2 AA (Days 3-4)
+2. `specs/02-sprints/sprint-2-frontend-accessibility/spec.md` — UI, animated carbon pulse, WCAG 2.2 AA (Days 3-4)
 3. `specs/02-sprints/sprint-3-ai-agents/spec.md` — Emissions Engine + 4 ADK agents (Days 5-7)
 4. `specs/02-sprints/sprint-4-polish-judge-checklist/spec.md` — Perf tuning, docs, final checklist (Day 8)
 
 ## WOW Features (Demo Priority)
 
-1. **Snap-to-Carbon** — photo → CO₂e <3s, swap suggestion — `specs/03-features/feature-01-snap-to-carbon.md`
-2. **Parallel-You Simulator** — dual globes, 12-month trajectories — `specs/03-features/feature-02-parallel-you-simulator.md`
-3. **Carbon Conversations** — Q&A over own data, grounded answers — `specs/03-features/feature-03-carbon-conversations.md`
+1. **Snap-to-Carbon** — photo → CO₂e <3s with an annotated-photo breakdown + swap suggestion
+2. **Transparent Engine** — every CO₂e shown as `quantity × DEFRA factor`; the LLM never does the math
+3. **Carbon Conversations** — grounded Q&A over the user's own logged data
 
 ## Module-specific instructions
 

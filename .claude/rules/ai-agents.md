@@ -8,38 +8,36 @@ paths: ["services/agents/**", "services/gateway/**"]
 ## The Golden Rule
 **LLM classifies and extracts. CODE calculates. Never let Gemini do arithmetic.**
 
-The emissions engine (`packages/schemas/emissions_engine.py`) is the single source of truth for CO₂e math. Gemini's job: identify food items, estimate portions, classify activities. Then hand off to `calculate_co2e()`.
+The emissions engine (`packages/emissions/engine.py`) is the single source of truth for CO₂e math. Gemini's job: identify food items, estimate portions, classify activities. Then hand off to `calculate_co2e()`.
 
 ## Model Routing
 | Agent | Model | Reason |
 |---|---|---|
-| Ingest Agent | gemini-1.5-flash | Multimodal, hot path, speed > quality |
-| Analyst Agent | gemini-1.5-flash | Function calling, hot path |
-| Forecast Agent | gemini-1.5-flash | Scenario math, hot path |
-| Coach Agent | gemini-1.5-pro | Weekly batch, quality > speed |
+| Ingest Agent | gemini-2.5-flash | Multimodal, hot path, speed > size |
+| Analyst Agent | none (deterministic) | Pure engine math — no LLM |
+| Forecast Agent | none (deterministic) | Pure engine math — no LLM |
+| Conversation Agent | gemini-2.5-flash | Grounded Q&A, SSE streaming |
+| Coach Agent | gemini-2.5-flash-lite | Weekly batch, cost-optimised |
 
-Never use Pro on the user-facing hot path (>3s latency kills the demo).
+Hot path uses **flash**; the lighter **flash-lite** is the batch/coach model and the automatic
+fallback when a model is rate-limited. Never use Pro on the user-facing hot path.
 
 ## ADK Agent Structure
 ```python
-# All agents must follow this pattern
-from google.adk import Agent
-from pydantic import BaseModel
+# All agents follow this ADK pattern (see services/agents/ecopulse_agents/)
+from google.adk.agents import LlmAgent
 
-class IngestOutput(BaseModel):
-    items: list[IdentifiedItem]
-    confidence: float
-
-ingest_agent = Agent(
-    model="gemini-1.5-flash",
-    system_prompt=open("prompts/ingest_v1.md").read(),  # versioned prompt file
-    output_schema=IngestOutput,  # structured output — validates automatically
-    safety_settings=SAFETY_SETTINGS,  # explicit, never default
+ingest_agent = LlmAgent(
+    name="ingest_agent",
+    model="gemini-2.5-flash",
+    instruction=load_prompt("ingest_v1"),  # versioned prompt file
+    tools=[score_meal],                     # deterministic engine wrapper — code does the math
+    generate_content_config=gen_config(temperature=0.0),
 )
 ```
 
 ## Prompt Management
-- All prompts live in `services/agents/prompts/` as versioned `.md` files (e.g., `ingest_v1.md`)
+- ADK prompts live in `services/agents/ecopulse_agents/prompts/*_v1.md` (reference service: `app/prompts/*_v1.py`)
 - Never embed prompts as inline strings in Python files
 - Include a changelog comment at the top of each prompt file
 - User content must always be wrapped in delimiters (injection defense)

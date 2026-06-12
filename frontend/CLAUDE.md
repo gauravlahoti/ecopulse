@@ -3,11 +3,19 @@
 ## Component conventions
 
 - RSC for data-fetching views; `'use client'` only for interactivity
-- CVA (`class-variance-authority`) for component variants — see `GlassCard.tsx` and `NeonButton.tsx`
+- CVA (`class-variance-authority`) for component variants — see `components/ui/GlassCard.tsx` and `NeonButton.tsx`
 - All animations must check `useReducedMotion()` and skip if true
-- `useSSEStream()` from `@/lib/sse` for all streaming agent responses
-- `fetchForecast()`, `fetchActivities()` from `@/lib/api` for non-streaming calls
-- MSW handlers in `lib/msw/handlers.ts` — keep in sync with gateway API contract
+- `useSSEStream()` from `@/lib/sse` for all streaming agent responses (ingest, chat)
+- Non-streaming reads go through `fetch('/api/v1/...')` to the Route Handlers — there is no client API SDK
+- MSW handlers in `lib/msw/handlers.ts` are **dev/offline only**; disabled when `NEXT_PUBLIC_USE_LIVE_BACKEND=true`
+
+## Data flow (server-only backend-for-frontend)
+
+The Route Handlers under `app/api/v1/*` (`ingest/image`, `ingest/text`, `coach/nudge`, `chat`,
+`activities`) are the server-side BFF. They hold `GEMINI_API_KEY`, call Gemini via the
+**server-only** `@/lib/gemini-vision` client, then recompute every CO₂e with the deterministic
+`@/lib/emissions` engine before returning. The Gemini client is never imported into a client
+component — the key never reaches the browser.
 
 ## Design tokens
 

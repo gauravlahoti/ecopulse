@@ -1,4 +1,4 @@
-"""Ingest Agent — Gemini 3.5 Flash, hot path (<3s target).
+"""Ingest Agent — Gemini 2.5 Flash, hot path (<3s target).
 
 Receives image bytes or text description, returns structured list of
 identified items. All CO₂e arithmetic is handled DOWNSTREAM by the
@@ -97,7 +97,7 @@ async def run_ingest_text(text_input: str) -> list[dict[str, Any]]:
         import google.generativeai as genai  # type: ignore[import-untyped]
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.5-flash",
             system_instruction=SYSTEM_PROMPT,
             generation_config=genai.GenerationConfig(
                 response_mime_type="application/json",
@@ -134,7 +134,7 @@ async def run_ingest_image(image_bytes: bytes, mime_type: str = "image/jpeg") ->
         import google.generativeai as genai  # type: ignore[import-untyped]
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-2.5-flash",
             system_instruction=SYSTEM_PROMPT,
             generation_config=genai.GenerationConfig(
                 response_mime_type="application/json",

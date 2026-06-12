@@ -17,14 +17,14 @@ paths: ["frontend/**/*.tsx", "frontend/**/*.ts"]
   const { reducedMotion } = useReducedMotion()
   // Only animate if !reducedMotion
   ```
-- The 3D globe component requires a 2D fallback (chart + data table) rendered when `prefers-reduced-motion: reduce`
-- The Parallel-You Simulator requires a 2D dual-line chart fallback
+- The animated carbon-pulse canvas + count-ups MUST freeze to their final state under reduced motion (`components/landing/CarbonPulse.tsx`)
+- GSAP scroll reveals MUST no-op under reduced motion (content renders at its final position — no scroll-jacking); Recharts render with `isAnimationActive={false}`
 
 ## Keyboard Navigation
 - Every interactive element must be reachable and operable via keyboard alone
 - Visible focus indicators required — never `outline: none` without a custom focus style
-- Timeline scrubber (Parallel-You Simulator) must support arrow key controls
-- Modal/dialog focus must be trapped while open, then restored on close
+- Disclosure controls (e.g. "How this was calculated") must be keyboard-operable (Enter/Space)
+- Modal/dialog focus must be trapped while open, then restored on close (scan/camera overlay = `role="dialog"`, Escape closes)
 
 ## Semantic HTML
 - Use semantic landmarks: `<main>`, `<nav>`, `<section aria-label>`, `<article>`
@@ -32,8 +32,8 @@ paths: ["frontend/**/*.tsx", "frontend/**/*.ts"]
 - Icons without adjacent text must have `aria-label` or `aria-hidden` + sibling screen-reader text
 
 ## Dynamic Content
-- ARIA live regions for streaming AI responses: `aria-live="polite"` on the activity feed
-- Globe updates must announce CO₂e changes to screen readers via a visually-hidden live region
+- ARIA live regions for streaming AI responses: `aria-live="polite"` on identified items, the activity feed, and chat answers
+- CO₂e total updates are announced as live text when new activities are logged
 - Loading states: `aria-busy="true"` during agent processing
 
 ## Color

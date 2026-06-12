@@ -67,7 +67,7 @@ class ActivityRecord(BaseModel):
 
 
 class ForecastScenario(BaseModel):
-    """A 12-month forecast trajectory for the Parallel-You Simulator."""
+    """A 12-month forecast trajectory (one leg of the dual "Current You" vs "Committed You" projection)."""
 
     scenario_id: str
     label: str  # "Current You" or "Committed You"
@@ -85,4 +85,5 @@ class CoachNudge(BaseModel):
     message: str
     intervention_key: str  # maps to a ForecastScenario intervention
     estimated_saving_pct: float = Field(ge=0.0, le=100.0)
+    offset_suggestion: str | None = None  # one concrete offset action (e.g. a verified reforestation contribution)
     generated_at: datetime
