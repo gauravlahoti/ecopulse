@@ -126,21 +126,29 @@ function normaliseUnit(value: number, unit: string): number {
   return value * (UNIT_TO_KG[unit.toLowerCase().trim()] ?? 1)
 }
 
-/** Find the best matching factor key for an identified item (exact → alias → substring → default). */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Find the best matching factor key for an item name.
+ * Matches aliases on WORD BOUNDARIES (so "cola" no longer matches "choCOLAte" and
+ * "tea" no longer matches "sTEAk"), preferring the longest matching alias, then
+ * falls back to a category default. Exact key match always wins first.
+ */
 export function lookupFactorKey(name: string, category: string): string | null {
   const factors = loadFactors()
   const n = name.toLowerCase().trim()
-
   if (factors[n]) return n
 
+  let best: { key: string; len: number } | null = null
   for (const [key, entry] of Object.entries(factors)) {
     for (const alias of entry.aliases) {
-      if (n.includes(alias) || alias.includes(n)) return key
+      const re = new RegExp(`\\b${escapeRegExp(alias)}\\b`)
+      if (re.test(n) && (!best || alias.length > best.len)) best = { key, len: alias.length }
     }
   }
-  for (const key of Object.keys(factors)) {
-    if (n.includes(key.split('_')[0]!)) return key
-  }
+  if (best) return best.key
   return CATEGORY_DEFAULTS[category] ?? null
 }
 

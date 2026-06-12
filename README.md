@@ -1,123 +1,195 @@
 # EcoPulse 🌍
 
-> Fitbit for your carbon footprint, with an AI coaching staff that works while you sleep.
+> Know the carbon in anything — snap a meal, upload a photo, or just describe an activity.
+> AI identifies it; a deterministic engine computes verified CO₂e; every number is explained.
 
-[![CI](https://github.com/ecopulse-app/ecopulse/actions/workflows/ci.yml/badge.svg)](https://github.com/ecopulse-app/ecopulse/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/coverage-≥85%25-brightgreen)](https://github.com/ecopulse-app/ecopulse/actions)
-[![Lighthouse](https://img.shields.io/badge/lighthouse-≥95-brightgreen)](https://github.com/ecopulse-app/ecopulse/actions)
-[![WCAG 2.2 AA](https://img.shields.io/badge/WCAG-2.2%20AA-blue)](docs/a11y.md)
+EcoPulse is an **agentic carbon-intelligence app**. You log what you consume the way you'd
+tell a friend ("paneer butter masala with 2 rotis", "Mumbai to Delhi by car"), and in a few
+seconds you get an auditable carbon figure, a labelled breakdown of how it was derived, and an
+AI coach that recommends — from *your* data — how to cut it.
 
-## Live Demo
+---
 
-🚀 **[ecopulse.run.app](https://ecopulse-frontend-xxxxx-uc.a.run.app)** *(deployed after Sprint 1 CI passes)*
+## 1. The vertical — Sustainability / personal carbon footprint
 
-## Architecture
+People can't reduce what they can't measure, and existing trackers are either tedious
+(manual spreadsheets) or untrustworthy (black-box numbers). EcoPulse targets **everyday
+carbon awareness**: frictionless multimodal logging + transparent, science-backed numbers +
+personalised, AI-generated guidance.
 
-```mermaid
-graph TD
-    FE["Frontend<br/>Next.js 15 · Three.js Globe<br/>Cloud Run"]
-    GW["API Gateway<br/>FastAPI · Auth · Rate Limiting<br/>Cloud Run"]
-    AG["Agent Orchestrator<br/>Google ADK · Gemini 3.5<br/>Cloud Run"]
-    EE["Emissions Engine<br/>Deterministic CO₂e Math<br/>Pure Python"]
-    IW["Insights Worker<br/>Coach + Forecast Batch<br/>Cloud Run Jobs"]
-    FS["Firestore<br/>Profiles · Activities<br/>Agent Memory"]
-    RD["Redis<br/>Emission Factors<br/>Semantic Cache"]
-    CS["Cloud Storage<br/>Images · Signed URLs"]
-    SM["Secret Manager<br/>All Keys"]
+## 2. The core idea — *AI identifies, code calculates*
 
-    FE -->|"HTTPS + Firebase Auth token"| GW
-    GW --> AG
-    GW --> EE
-    GW --> IW
-    AG --> FS
-    AG --> RD
-    AG --> CS
-    IW --> FS
-    EE --> RD
-    GW --> SM
-    AG --> SM
+This is the architectural backbone and the project's main differentiator:
+
+- **The LLM (Gemini) only identifies and classifies** — what's on the plate, the quantity, the
+  distance of a trip. It never does arithmetic.
+- **A deterministic engine does every CO₂e calculation** from a bundled **DEFRA 2024** emission
+  factor table. Each figure is `quantity × factor`, reproducible and shown to the user.
+
+So even when the model is wrong about a number, the *math* is always correct and auditable. The
+UI's "How this was calculated" panel renders the exact `quantity × DEFRA factor = kg CO₂e` for
+every item, with the source — the LLM's output is never trusted for figures.
+
+Engine: [`frontend/lib/emissions/`](frontend/lib/emissions/) (TypeScript port of the Python
+[`services/agents/.../emissions/engine.py`](services/agents/ecopulse_agents/emissions/engine.py),
+sharing the same `defra_2024.json` factor file).
+
+## 3. How the solution works
+
+```
+                 ┌─ Snap (camera)  ─┐
+   User input ───┼─ Upload photo  ──┼──▶ /api/v1/ingest/image ─▶ Gemini vision ─┐
+                 └─ Describe (text) ─┘    /api/v1/ingest/text  ─▶ Gemini text   │
+                                                                                │  identifies items
+                                                                                ▼  (+ bounding boxes)
+                                              ┌──────────────────────────────────────────┐
+                                              │  Deterministic engine (lib/emissions)     │
+                                              │  quantity × DEFRA 2024 factor = kg CO₂e    │
+                                              └──────────────────────────────────────────┘
+                                                                                │
+                          ┌─────────────────────────────────────────────────────┼─────────────────┐
+                          ▼                          ▼                            ▼                 ▼
+                 Annotated photo            "How this was calculated"      Dashboard charts    AI Coach + Q&A
+                 (labelled boxes)            transparent breakdown        (trend, donut)      (grounded in data)
 ```
 
-## Setup in 3 Commands
+1. **Capture** — Snap a meal, upload a photo, or describe an activity in plain language.
+2. **Identify (AI)** — Gemini (`gemini-2.5-flash`, falling back to `flash-lite` on rate-limit)
+   returns structured items: name, quantity, unit, category — and, for photos, **bounding boxes**
+   used to draw labelled highlights over the image. Text input infers distances/portions from
+   world knowledge (e.g. "Mumbai → Delhi" ≈ 1400 km).
+3. **Calculate (code)** — the deterministic engine maps each item to a DEFRA factor and computes
+   CO₂e. This is the single source of truth for every number shown.
+4. **Explain** — the breakdown panel shows the arithmetic + DEFRA source for full transparency.
+5. **Coach** — Gemini generates a personalised reduction + offset recommendation **from the
+   user's actual logged data**, and Carbon Conversations answers questions grounded strictly in
+   that data (never fabricated).
 
-```bash
-git clone https://github.com/ecopulse-app/ecopulse && cd ecopulse
-cp .env.example .env          # fill in your GCP project ID
-docker compose up
-```
+The dashboard starts **empty** and is built entirely from what the user logs — no seed data.
 
-App runs at **http://localhost:3000** · Gateway at **http://localhost:8000/docs**
+## 4. Technical stack
 
-## Project Structure
+### Frontend
+- **Next.js 15** (App Router) · **React 19** · **TypeScript (strict)**
+- **Tailwind CSS** · **Framer Motion** · **GSAP** (`ScrollTrigger`) for the landing storytelling
+- **Zustand** (state) · **Recharts** (trend/donut) · **Canvas 2D** (animated carbon-pulse + photo annotation)
+- Tooling: **Vitest + React Testing Library**, **Playwright + axe-core**, ESLint (`jsx-a11y`), **MSW** (offline dev)
+
+### Server / API layer
+- **Next.js Route Handlers** (Node runtime) under `app/api/v1/*` — server-only; they hold the Gemini
+  key and call Gemini + the deterministic engine, so **secrets never reach the browser**.
+- **Deterministic Emissions Engine** — pure **TypeScript** (`frontend/lib/emissions`) mirroring the pure
+  **Python** engine (`services/agents/.../emissions`), both reading the same bundled `defra_2024.json`.
+- The repo also includes a **FastAPI** gateway (`services/gateway`) for the fuller multi-service topology.
+
+### Agentic AI stack — Google ADK (coordinator / delegation pattern)
+- **Google ADK (Agent Development Kit).** A root **coordinator** dispatches each tagged turn to the
+  right specialist **sub-agent**, or calls a deterministic tool directly:
+
+  ```
+  ecopulse_coordinator  (LlmAgent · gemini-2.5-flash)
+  ├─ sub_agents:                              ← ADK delegation
+  │   ├─ ingest_agent        (flash)      tools=[score_meal]        ← identify items → engine scores
+  │   ├─ conversation_agent  (flash)                                ← grounded Q&A over the user's data
+  │   └─ coach_agent         (flash-lite) tools=[finalize_nudge]    ← weekly nudge, engine-verified %
+  └─ tools=[build_dual_forecast]                                    ← deterministic 12-month projection
+  ```
+
+- **Deterministic FunctionTools** (`score_meal`, `build_dual_forecast`, `finalize_nudge`) wrap the
+  emissions engine — the LLM delegates **all arithmetic to code** (the golden rule).
+- **Models:** Gemini **2.5 Flash** on the hot path (coordinator/ingest/conversation), **2.5 Flash-Lite**
+  for batch coaching. Versioned markdown prompts (`root_v1`, `ingest_v1`, …); user content delimited
+  (`<user_content>`, injection defense); explicit Gemini safety settings (never defaults).
+
+> **Live-demo note:** for reliability under free-tier quota, the frontend's hot path calls Gemini
+> **directly** from the route handlers (flash → flash-lite fallback) and recomputes CO₂e with the TS
+> engine. The ADK coordinator on Cloud Run embodies the same pattern server-side and is the production
+> agent path.
+
+### Google Cloud services leveraged
+| Service | How it's used |
+|---|---|
+| **Google ADK** | Agent framework — coordinator + `sub_agents` delegation, `FunctionTool` wrappers |
+| **agents-cli** | Scaffolds and deploys the ADK app (`agents-cli deploy` → Cloud Run) |
+| **Gemini API** (2.5 Flash / Flash-Lite) | Multimodal item identification (+ bounding boxes), coach, Q&A |
+| **Cloud Run** | Hosts the ADK agent service (public `run.invoker`) and the Next.js frontend |
+| **Cloud Build** | Builds the container image during deploy |
+| **Secret Manager** | `GEMINI_API_KEY` mounted as a Cloud Run secret env var (never in code) |
+| **IAM** | `run.invoker` (public agent), `secretmanager.secretAccessor` (SA→secret), `aiplatform.user` |
+| **Vertex AI** | Enabled as the no-API-key fallback (service-account auth, no daily quota cap) |
+
+## 5. Project structure
 
 ```
 ecopulse/
-├── frontend/          Next.js 15 app (globe UI, Tailwind, Framer Motion)
-├── services/
-│   ├── gateway/       FastAPI API gateway (auth, validation, routing)
-│   ├── agents/        Google ADK orchestrator + 4 Gemini sub-agents
-│   └── insights-worker/ Cloud Run Jobs (nightly forecasts, weekly coach)
-├── packages/schemas/  Shared Pydantic + Zod contracts
-├── evals/             AI extraction accuracy eval suite
-├── docs/              ADRs, threat model, a11y checklist, judge checklist
-└── .github/workflows/ CI/CD (lint → typecheck → test → build → deploy)
+├── frontend/                      Next.js 15 (App Router) · TypeScript strict · Tailwind
+│   ├── app/
+│   │   ├── page.tsx               Landing — GSAP scroll storytelling, animated carbon pulse
+│   │   ├── dashboard/page.tsx     Dashboard — input hero, intelligence, charts, coach
+│   │   └── api/v1/                Route handlers (server-only): ingest/image, ingest/text,
+│   │                              coach/nudge, chat — all call Gemini + the engine
+│   ├── lib/
+│   │   ├── emissions/             ★ Deterministic DEFRA engine (pure, tested)
+│   │   ├── gemini-vision.ts       Server-only Gemini client (vision/text/coach/chat + fallback)
+│   │   ├── useGsap.ts             Reduced-motion-safe GSAP reveal helper
+│   │   └── store.ts               Zustand app state
+│   ├── components/                UI (EmissionBreakdown, CameraOverlay, dashboard/*, …)
+│   └── scripts/                   axe-audit.mjs, shots.mjs, verify-browser.mjs (headless Chrome)
+├── services/agents/               Google ADK agents + the original Python emissions engine
+├── specs/                         Product & sprint specs (gitignored)
+└── docs/                          ADRs, threat model, a11y notes
 ```
 
-## WOW Features
+## 6. Running it
 
-| Feature | Description | Latency |
+```bash
+cd frontend
+npm install
+# .env.local holds GEMINI_API_KEY (server-only, gitignored) for the ingest/coach/chat routes
+npm run dev          # http://localhost:3000
+```
+
+Quality gates:
+
+```bash
+npm run type-check                 # tsc --noEmit (strict)
+npm run lint                       # ESLint + jsx-a11y
+npm run test                       # Vitest unit tests (incl. the emissions engine)
+node scripts/axe-audit.mjs         # axe-core WCAG 2.2 AA (zero violations)
+npm run build                      # production build
+```
+
+## 7. How this maps to the evaluation criteria
+
+| Axis | What we did | Where |
 |---|---|---|
-| 📸 **Snap-to-Carbon** | Photograph any meal → CO₂e appears on your globe | <3s p95 |
-| 🌍 **Parallel-You Simulator** | Dual globes showing your 12-month trajectory vs committed-you | <1s cached |
-| 💬 **Carbon Conversations** | Natural language Q&A over your own emissions data | <1.5s first token |
+| **Problem-statement alignment** | Frictionless multimodal carbon logging with transparent, science-backed numbers and AI guidance — exactly the sustainability problem. | whole app |
+| **Code Quality** | TypeScript **strict** (no `any`, no `ts-ignore`), small single-responsibility modules, the engine is a pure, documented, faithful port of the Python source (one factor file as source of truth), conventional commits. | `lib/emissions`, `lib/gemini-vision.ts` |
+| **Security** | No secrets in code — `GEMINI_API_KEY` is server-only env / Secret Manager; route handlers are server-side so the key never reaches the browser; **all user content is delimited** (`<user_content>…`) in prompts (injection defense); model output is **validated/coerced** before use and is never trusted for numbers (fail-closed: unmatched items count as 0, not a guess). | `app/api/v1/*`, `gemini-vision.ts` |
+| **Efficiency** | Gemini **Flash / Flash-Lite** only (cheap, fast hot path) with automatic fallback; the deterministic engine avoids LLM calls for all math; charts render from in-memory data with `isAnimationActive={false}`; reduced-motion paths skip animation; production bundle is code-split per route. | `gemini-vision.ts`, `dashboard/*` |
+| **Testing** | Vitest unit tests for the **deterministic engine** (calculation, unit conversion, swap logic, text parsing, forecast) — the part where correctness matters most — plus existing component tests; headless-Chrome scripts validate real render + zero console errors. | `__tests__/`, `scripts/` |
+| **Accessibility** | **WCAG 2.2 AA, zero axe violations** on both pages; semantic landmarks, labelled controls, focus-visible rings, keyboard-operable scroll regions, `aria-live` for streaming results, and **every animation gated behind `prefers-reduced-motion`**. | `scripts/axe-audit.mjs`, all components |
 
-## Judge Scorecard
+## 8. Assumptions & limitations
 
-| Axis | Implementation |
-|---|---|
-| **Code Quality** | Strict TypeScript + mypy, conventional commits, CODEOWNERS, 5 ADRs |
-| **Security** | WIF (no SA keys), gitleaks CI gate, Firestore user-scoped, OWASP mapped |
-| **Efficiency** | Gemini Flash on hot path, 3-tier cache, Lighthouse ≥95, bundle <150KB |
-| **Testing** | ≥85% coverage, golden-file LLM tests, eval suite (≥90% accuracy), Playwright E2E |
-| **Accessibility** | WCAG 2.2 AA, axe zero violations, NVDA-tested, full keyboard nav |
+- **Single-user demo.** This build uses an in-memory client store rather than per-user
+  Firestore auth; a production deployment would add Firebase Auth + user-scoped reads (the
+  scoping pattern is documented in the agent rules).
+- **Free-tier Gemini key.** The Developer API key is rate-limited (~20 requests/day/model). The
+  app degrades gracefully — photo/text/coach/chat surface an honest "rate-limited" message, and
+  typed input falls back to an offline lexical parser (clearly flagged as approximate). For a
+  zero-quota-anxiety demo, switching to **Vertex AI** (service-account auth, no daily cap) is a
+  one-config change.
+- **DEFRA 2024 (UK) factors** are used as the science base, applied as a reasonable proxy for
+  other regions; food values are per kg edible weight.
+- **Distances/portions** for typed input are AI-estimated from world knowledge when not stated.
+- The **deterministic engine is authoritative** — if the bundled factor table has no match for an
+  item, it is counted as 0 rather than fabricated.
 
-## Development
+## 9. Differentiators for judges
 
-```bash
-# Frontend only
-cd frontend && npm run dev
-
-# Backend only
-cd services/gateway && uvicorn app.main:app --reload
-
-# All services
-docker compose up
-
-# Tests
-npm run test                    # frontend (Vitest)
-pytest services/gateway/        # gateway
-npm run test:e2e                # Playwright E2E
-
-# Quality
-npm run lint                    # ESLint + Ruff
-npm run type-check              # tsc + mypy --strict
-npm run lighthouse              # Lighthouse CI
-npm run evals                   # AI eval suite
-```
-
-## Deployment
-
-Automatic on merge to `main` via GitHub Actions + Workload Identity Federation.
-
-Manual:
-```bash
-bash infra/gcloud_deploy.sh
-```
-
-## Docs
-
-- [Architecture Decision Records](docs/adr/)
-- [Threat Model](docs/threat-model.md)
-- [Accessibility Report](docs/a11y.md)
-- [Judge Checklist](docs/judge-checklist.md)
-- [API Docs](https://ecopulse-gateway-xxxxx-uc.a.run.app/docs)
+- **Transparency:** every CO₂e figure is shown as `quantity × DEFRA factor`, with source — no
+  black-box numbers.
+- **Annotated vision:** photos are returned with labelled bounding boxes per detected item.
+- **Grounded AI:** the coach and chat answer only from the user's real logged data.
+- **Resilience:** model fallback + offline parser + graceful, honest error states throughout.

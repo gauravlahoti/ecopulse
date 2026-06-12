@@ -13,6 +13,21 @@ class MockObserver {
 globalThis.IntersectionObserver ??= MockObserver as unknown as typeof IntersectionObserver
 globalThis.ResizeObserver ??= MockObserver as unknown as typeof ResizeObserver
 
+// jsdom doesn't implement matchMedia; CountUp / useGsap (and prefers-reduced-motion
+// checks) rely on it. Default to "no reduced-motion preference".
+if (typeof window !== 'undefined' && !window.matchMedia) {
+  window.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia
+}
+
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
