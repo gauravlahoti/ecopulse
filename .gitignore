@@ -74,3 +74,9 @@ evals/results/*.json
 
 # Lighthouse
 .lighthouseci/
+
+# Specs (kept local)
+specs/
+
+# Local screenshot/verification artifacts
+frontend/.shots/

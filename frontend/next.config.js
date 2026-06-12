@@ -2,8 +2,10 @@
 const nextConfig = {
   output: 'standalone',
 
+  // Do NOT add @react-three/* to optimizePackageImports — Next's barrel
+  // optimisation re-exports them through a path that breaks R3F internals.
   experimental: {
-    optimizePackageImports: ['three', '@react-three/fiber', '@react-three/drei'],
+    optimizePackageImports: ['three'],
   },
 
   images: {

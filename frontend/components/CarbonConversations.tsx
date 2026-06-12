@@ -9,9 +9,9 @@ import { useSSEStream } from '@/lib/sse'
 import type { AgentStreamEvent } from '@/lib/types'
 
 const SUGGESTED_QUESTIONS = [
-  'Why was last month so high?',
-  'What\'s my biggest impact area?',
-  'How do I hit 2t CO₂e by year end?',
+  'What drove my footprint the most?',
+  'Which activity should I change first?',
+  'Summarise what I\'ve logged so far',
 ]
 
 export function CarbonConversations() {

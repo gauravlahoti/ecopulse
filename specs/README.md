@@ -7,7 +7,7 @@ Agentic carbon intelligence platform for the Google "PromptWars" hackathon.
 1. Pick a spec folder (sprints are ordered; features inside a sprint can be parallelized).
 2. Each spec is self-contained: goal, user stories, tasks, acceptance criteria, and judge-criteria mapping.
 3. A spec is **Done** only when every acceptance criterion is checked and CI is green.
-4. Build order: Sprint 1 → Sprint 2 → Sprint 3 → Sprint 4. WOW features (03-features) slot into Sprint 3/4.
+4. Build order: Sprint 1 → Sprint 2 → Sprint 3 → Sprint 4. WOW features (03-features) slot into Sprint 3/4.Makure Th 
 
 ## Index
 

@@ -1,5 +1,18 @@
 import '@testing-library/jest-dom'
 
+// jsdom ships neither observer. framer-motion's `whileInView` needs
+// IntersectionObserver; recharts' ResponsiveContainer needs ResizeObserver.
+class MockObserver {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): [] {
+    return []
+  }
+}
+globalThis.IntersectionObserver ??= MockObserver as unknown as typeof IntersectionObserver
+globalThis.ResizeObserver ??= MockObserver as unknown as typeof ResizeObserver
+
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),

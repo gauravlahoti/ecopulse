@@ -47,6 +47,8 @@ export type CoachNudge = {
   message: string
   intervention_key: string
   estimated_saving_pct: number
+  /** AI-suggested offset action (e.g. a verified reforestation contribution). */
+  offset_suggestion?: string
   generated_at: string
 }
 

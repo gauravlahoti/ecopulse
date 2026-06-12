@@ -105,10 +105,16 @@ export function ActivityFeed({ activities, isLoading = false }: ActivityFeedProp
       </div>
 
       {/* Live region — announces new activities to screen readers */}
+      {/* A scrollable region must be keyboard-focusable so it can be scrolled
+          without a mouse (WCAG 2.2 scrollable-region-focusable). That intentionally
+          conflicts with jsx-a11y/no-noninteractive-tabindex, so we scope-disable it. */}
       <div
         aria-live="polite"
         aria-label="Activity feed updates"
-        className="flex flex-col gap-2 max-h-[360px] overflow-y-auto pr-1 scrollbar-thin"
+        role="region"
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={0}
+        className="flex flex-col gap-2 max-h-[360px] overflow-y-auto pr-1 scrollbar-thin focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-cyan rounded-lg"
       >
         {isLoading && (
           <div className="flex items-center gap-2 p-3" role="status" aria-label="Loading activities">

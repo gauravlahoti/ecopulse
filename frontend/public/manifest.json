@@ -1,0 +1,10 @@
+{
+  "name": "EcoPulse — Carbon Intelligence",
+  "short_name": "EcoPulse",
+  "description": "Fitbit for your carbon footprint, with an AI coaching staff that works while you sleep.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#05080F",
+  "theme_color": "#05080F",
+  "icons": []
+}

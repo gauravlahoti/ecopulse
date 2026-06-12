@@ -1,0 +1,11 @@
+# Keep the image (and the copied agent package) clean. Docker always keeps the
+# Dockerfile/.dockerignore available to the build even when listed here.
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.*
+Dockerfile
+.dockerignore
+agents-cli-manifest.yaml
+_smoke_local.py

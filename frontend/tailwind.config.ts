@@ -13,14 +13,20 @@ const config: Config = {
         'space-black': '#05080F',
         'space-deep': '#080C17',
         'space-surface': '#0D1526',
+        'space-elevated': '#111B30',
         'space-border': 'rgba(255, 255, 255, 0.07)',
 
         // Primary accent — Clean Energy Cyan
         'neon-cyan': '#00F5D4',
         'neon-cyan-muted': 'rgba(0, 245, 212, 0.12)',
 
+        // Tertiary accent — Living Green (the "eco" warmth alongside cyan)
+        'eco-lime': '#7CFFB2',
+
         // Secondary accent — AI Purple
         'neon-purple': '#7B61FF',
+        // Lighter purple for TEXT on dark surfaces (#7B61FF only hits ~4.4:1).
+        'neon-purple-light': '#9B86FF',
         'neon-purple-muted': 'rgba(123, 97, 255, 0.12)',
 
         // Carbon severity scale
@@ -32,7 +38,8 @@ const config: Config = {
         // Text
         'text-primary': '#E8EDF5',
         'text-secondary': '#8892A4',
-        'text-muted': '#4A5568',
+        // Lightened from #4A5568 to clear WCAG 2.2 AA 4.5:1 on the dark surfaces.
+        'text-muted': '#7C8799',
       },
       fontFamily: {
         display: ['var(--font-space-grotesk)', 'sans-serif'],
@@ -62,11 +69,27 @@ const config: Config = {
         'count-up': 'count-up 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
         'slide-in-right': 'slide-in-right 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
         'fade-up': 'fade-up 0.4s ease-out',
+        'float-slow': 'float-slow 9s ease-in-out infinite',
+        'aurora': 'aurora 22s ease-in-out infinite',
+        'shimmer': 'shimmer 2.4s linear infinite',
       },
       keyframes: {
         scan: {
           '0%': { transform: 'translateY(0)', opacity: '0.8' },
           '100%': { transform: 'translateY(100%)', opacity: '0' },
+        },
+        'float-slow': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-14px)' },
+        },
+        aurora: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(4%, -6%) scale(1.08)' },
+          '66%': { transform: 'translate(-5%, 4%) scale(0.96)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
         },
         'pulse-glow': {
           '0%, 100%': { boxShadow: '0 0 20px rgba(0, 245, 212, 0.4)' },

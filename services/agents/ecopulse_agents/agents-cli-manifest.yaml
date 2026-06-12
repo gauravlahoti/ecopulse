@@ -1,0 +1,17 @@
+# agents-cli project manifest for the EcoPulse ADK coordinator.
+# `agents-cli deploy` reads `name` (-> Cloud Run service name) and dispatches by
+# create_params.deployment_target. One coordinator service (root_agent +
+# in-process sub-agents); the build context is this directory.
+name: "ecopulse-agents"
+acli_version: "0.4.0"
+agent_directory: "."
+region: "us-central1"
+base_template: "adk"
+language: "python"
+create_params:
+  deployment_target: "cloud_run"
+  session_type: "in_memory"
+  cicd_runner: "skip"
+  include_data_ingestion: false
+  datastore: "none"
+  agent_guidance_filename: "CLAUDE.md"

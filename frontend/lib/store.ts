@@ -9,6 +9,8 @@ type AppState = {
 
   // Streaming (Snap-to-Carbon)
   isSnapping: boolean
+  /** When set, the scan overlay analyses this uploaded file instead of the live camera. */
+  pendingPhoto: File | null
   streamingItems: Array<IdentifiedItem & { co2e_kg: number }>
   swapSuggestion: string | null
   swapSavingPct: number | null
@@ -29,6 +31,7 @@ type AppState = {
   addActivity: (activity: ActivityRecord) => void
   setIsLoadingActivities: (loading: boolean) => void
   setIsSnapping: (snapping: boolean) => void
+  openScanWithPhoto: (file: File) => void
   addStreamingItem: (item: IdentifiedItem & { co2e_kg: number }) => void
   setSwapSuggestion: (suggestion: string, pct: number) => void
   clearSnap: () => void
@@ -57,6 +60,7 @@ export const useStore = create<AppState>((set) => ({
   totalCo2eKg: 0,
   isLoadingActivities: false,
   isSnapping: false,
+  pendingPhoto: null,
   streamingItems: [],
   swapSuggestion: null,
   swapSavingPct: null,
@@ -79,7 +83,9 @@ export const useStore = create<AppState>((set) => ({
 
   setIsLoadingActivities: (loading) => set({ isLoadingActivities: loading }),
 
-  setIsSnapping: (snapping) => set({ isSnapping: snapping, streamingItems: [] }),
+  setIsSnapping: (snapping) => set({ isSnapping: snapping, streamingItems: [], pendingPhoto: null }),
+
+  openScanWithPhoto: (file) => set({ isSnapping: true, pendingPhoto: file, streamingItems: [] }),
 
   addStreamingItem: (item) =>
     set((s) => ({ streamingItems: [...s.streamingItems, item] })),
@@ -88,7 +94,7 @@ export const useStore = create<AppState>((set) => ({
     set({ swapSuggestion: suggestion, swapSavingPct: pct }),
 
   clearSnap: () =>
-    set({ isSnapping: false, streamingItems: [], swapSuggestion: null, swapSavingPct: null }),
+    set({ isSnapping: false, pendingPhoto: null, streamingItems: [], swapSuggestion: null, swapSavingPct: null }),
 
   setChatOpen: (open) => set({ chatOpen: open }),
 

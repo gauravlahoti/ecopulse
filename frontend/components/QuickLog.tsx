@@ -2,113 +2,153 @@
 
 import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import { GlassCard } from './ui/GlassCard'
 import { NeonButton } from './ui/NeonButton'
+import { EmissionBreakdown } from './EmissionBreakdown'
 import { useStore } from '@/lib/store'
-import { useSSEStream } from '@/lib/sse'
-import type { AgentStreamEvent } from '@/lib/types'
+import { parseText, scoreItems } from '@/lib/emissions'
+import type { ActivityRecord, IdentifiedItem } from '@/lib/types'
 
-type Mode = 'idle' | 'camera' | 'text' | 'file'
+type Mode = 'idle' | 'text' | 'upload'
+type Status = { kind: 'idle' | 'working' | 'done' | 'error'; message?: string }
+
+function buildActivity(
+  description: string,
+  items: IdentifiedItem[],
+  sourceType: string,
+): ActivityRecord {
+  // CODE calculates — recompute every figure from the deterministic engine,
+  // regardless of where identification came from (typed parse or Ingest Agent).
+  const { totalCo2eKg, swapSuggestion, swapSavingPct } = scoreItems(items)
+  return {
+    id: `act_${Date.now().toString(36)}`,
+    user_id: 'demo-user',
+    category: items[0]?.category ?? 'other',
+    description,
+    co2e_kg: totalCo2eKg,
+    items,
+    timestamp: new Date().toISOString(),
+    source_type: sourceType,
+    ...(swapSuggestion && swapSavingPct !== null
+      ? { swap_suggestion: swapSuggestion, swap_co2e_saving_pct: swapSavingPct }
+      : {}),
+  }
+}
 
 export function QuickLog() {
   const [mode, setMode] = useState<Mode>('idle')
   const [textInput, setTextInput] = useState('')
-  const [isAnalysing, setIsAnalysing] = useState(false)
+  const [status, setStatus] = useState<Status>({ kind: 'idle' })
+  const [lastItems, setLastItems] = useState<IdentifiedItem[] | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const reducedMotion = useReducedMotion()
-  const { setIsSnapping, addActivity, addStreamingItem, setSwapSuggestion, clearSnap } = useStore()
-  const { stream, abort } = useSSEStream()
+  const { setIsSnapping, addActivity, openScanWithPhoto } = useStore()
 
-  function handleSnapClick() {
-    setMode('camera')
-    setIsSnapping(true)
-  }
+  const showResult = useCallback((items: IdentifiedItem[]) => {
+    setLastItems(items)
+    setStatus({ kind: 'done' })
+  }, [])
 
-  const handleTextSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault()
-    const text = textInput.trim()
-    if (!text || isAnalysing) return
-    setTextInput('')
-    setIsAnalysing(true)
+  const handleTextSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      const text = textInput.trim()
+      if (!text) return
+      setTextInput('')
+      setMode('idle')
+      setStatus({ kind: 'working', message: 'AI is reading your activity…' })
 
-    await stream(
-      '/api/v1/ingest/text',
-      { body: { text } },
-      (event: AgentStreamEvent) => {
-        if (event.type === 'item_identified') {
-          addStreamingItem({ ...event.item, co2e_kg: event.co2e_kg })
-        } else if (event.type === 'swap_suggestion') {
-          setSwapSuggestion(event.suggestion, event.saving_pct)
-        } else if (event.type === 'activity_complete') {
-          addActivity(event.activity)
-          clearSnap()
-        }
-      },
-      () => setIsAnalysing(false),
-      () => setIsAnalysing(false),
-    )
-    setMode('idle')
-  }, [textInput, isAnalysing, stream, addStreamingItem, setSwapSuggestion, addActivity, clearSnap])
+      // AI extracts items (infers distances/portions); engine then calculates.
+      let items: IdentifiedItem[] = []
+      try {
+        const res = await fetch('/api/v1/ingest/text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        })
+        const data = (await res.json()) as { items?: IdentifiedItem[]; error?: string }
+        items = data.items ?? []
+      } catch {
+        /* network issue — fall through to the offline parser */
+      }
+      // Fallback: offline lexical parser if AI is unavailable/rate-limited.
+      if (!items.length) items = parseText(text)
 
-  function handleFileDrop(e: React.DragEvent<HTMLDivElement>) {
-    e.preventDefault()
-    const file = e.dataTransfer.files[0]
-    if (file) handleFileUpload(file)
-  }
+      if (!items.length) {
+        setStatus({
+          kind: 'error',
+          message: "Couldn't recognise an activity. Try e.g. “chicken biryani 300g” or “Mumbai to Delhi by car”.",
+        })
+        return
+      }
+      addActivity(buildActivity(text, items, 'text'))
+      showResult(items)
+    },
+    [textInput, addActivity, showResult],
+  )
 
-  function handleFileUpload(file: File) {
-    addActivity({
-      id: `opt-${Date.now()}`,
-      user_id: 'demo-user',
-      category: 'energy',
-      description: `Uploaded: ${file.name}`,
-      co2e_kg: 0,
-      items: [],
-      timestamp: new Date().toISOString(),
-      source_type: 'pdf',
-    })
-    setMode('idle')
-  }
+  const handlePhotoUpload = useCallback(
+    (file: File) => {
+      if (!file.type.startsWith('image/')) {
+        setStatus({ kind: 'error', message: 'Please choose an image (JPEG, PNG, or WebP).' })
+        return
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        setStatus({ kind: 'error', message: 'Image too large (max 10 MB).' })
+        return
+      }
+      setStatus({ kind: 'idle' })
+      // Open the annotated scan overlay with this photo (same view as Snap).
+      openScanWithPhoto(file)
+    },
+    [openScanWithPhoto],
+  )
 
   const spring = { type: 'spring' as const, stiffness: 400, damping: 30 }
 
   return (
-    <GlassCard padding="md">
-      <h2 className="font-mono text-carbon-label text-text-muted uppercase tracking-widest mb-3">
-        Quick Log
-      </h2>
-
-      {/* Mode buttons */}
-      <div className="flex gap-2 mb-3" role="group" aria-label="Log activity method">
+    <div>
+      <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label="Log activity method">
         <NeonButton
           size="sm"
-          variant={mode === 'camera' ? 'solid' : 'cyan'}
-          onClick={handleSnapClick}
-          aria-pressed={mode === 'camera'}
+          variant="cyan"
+          onClick={() => {
+            setMode('idle')
+            setIsSnapping(true)
+          }}
         >
           📷 Snap
         </NeonButton>
         <NeonButton
           size="sm"
-          variant={mode === 'text' ? 'solid' : 'cyan'}
-          onClick={() => { abort(); setMode(mode === 'text' ? 'idle' : 'text') }}
-          aria-pressed={mode === 'text'}
-          aria-expanded={mode === 'text'}
+          variant={mode === 'upload' ? 'solid' : 'cyan'}
+          onClick={() => fileInputRef.current?.click()}
+          aria-pressed={mode === 'upload'}
         >
-          ✏ Type
+          🖼 Upload photo
         </NeonButton>
         <NeonButton
           size="sm"
-          variant={mode === 'file' ? 'solid' : 'cyan'}
-          onClick={() => setMode(mode === 'file' ? 'idle' : 'file')}
-          aria-pressed={mode === 'file'}
-          aria-expanded={mode === 'file'}
+          variant={mode === 'text' ? 'solid' : 'cyan'}
+          onClick={() => setMode(mode === 'text' ? 'idle' : 'text')}
+          aria-pressed={mode === 'text'}
+          aria-expanded={mode === 'text'}
         >
-          📄 PDF
+          ✏ Describe
         </NeonButton>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          aria-label="Upload a photo of food to calculate its carbon footprint"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) handlePhotoUpload(f)
+            e.target.value = ''
+          }}
+        />
       </div>
 
-      {/* Expanding panels */}
       <AnimatePresence>
         {mode === 'text' && (
           <motion.div
@@ -119,66 +159,48 @@ export function QuickLog() {
             transition={spring}
             className="overflow-hidden"
           >
-            <form onSubmit={(e) => { void handleTextSubmit(e) }} className="flex gap-2">
+            <form onSubmit={(e) => void handleTextSubmit(e)} className="flex gap-2">
               <label htmlFor="activity-text" className="sr-only">
-                Describe your activity (e.g. &quot;drove 20km&quot;, &quot;beef burger&quot;)
+                Describe your activity (e.g. &quot;drove 20km&quot;, &quot;beef burger 200g&quot;)
               </label>
               <input
                 id="activity-text"
                 type="text"
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                placeholder='e.g. "beef burger lunch" or "drove 20km"'
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/30"
+                placeholder='e.g. "paneer butter masala 250g, 2 rotis" or "drove 20km"'
+                className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30"
                 // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
               />
-              <NeonButton type="submit" size="sm" variant="solid" disabled={!textInput.trim() || isAnalysing}>
-                {isAnalysing ? '…' : 'Log'}
+              <NeonButton type="submit" size="sm" variant="solid" disabled={!textInput.trim()}>
+                Calculate
               </NeonButton>
             </form>
           </motion.div>
         )}
-
-        {mode === 'file' && (
-          <motion.div
-            key="file-panel"
-            initial={reducedMotion ? {} : { height: 0, opacity: 0 }}
-            animate={reducedMotion ? {} : { height: 'auto', opacity: 1 }}
-            exit={reducedMotion ? {} : { height: 0, opacity: 0 }}
-            transition={spring}
-            className="overflow-hidden"
-          >
-            <div
-              role="button"
-              tabIndex={0}
-              aria-label="Drop PDF or image here, or click to browse"
-              className="border border-dashed border-neon-cyan/30 rounded-xl p-6 text-center cursor-pointer hover:border-neon-cyan/60 hover:bg-neon-cyan/5 transition-all"
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={handleFileDrop}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
-              }}
-            >
-              <span className="text-2xl block mb-2" aria-hidden="true">📄</span>
-              <p className="text-text-secondary text-sm">Drop utility bill or flight confirmation</p>
-              <p className="text-text-muted text-xs mt-1">PDF, JPG, PNG up to 10MB</p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,image/jpeg,image/png,image/webp"
-                className="sr-only"
-                aria-label="Upload file"
-                onChange={(e) => {
-                  const f = e.target.files?.[0]
-                  if (f) handleFileUpload(f)
-                }}
-              />
-            </div>
-          </motion.div>
-        )}
       </AnimatePresence>
-    </GlassCard>
+
+      {/* Status + transparent result */}
+      {status.kind === 'working' && (
+        <div className="mt-3 flex items-center gap-2 text-sm text-text-secondary" role="status" aria-live="polite">
+          <span className="h-3 w-3 animate-spin rounded-full border-2 border-neon-cyan/30 border-t-neon-cyan" aria-hidden="true" />
+          {status.message}
+        </div>
+      )}
+
+      {status.kind === 'error' && (
+        <p className="mt-3 rounded-lg border border-carbon-high/30 bg-carbon-high/[0.08] px-3 py-2 text-sm text-carbon-high" role="alert">
+          {status.message}
+        </p>
+      )}
+
+      {status.kind === 'done' && lastItems && (
+        <div className="mt-3">
+          <p className="mb-2 text-sm text-carbon-low">✓ Logged · calculated from DEFRA factors</p>
+          <EmissionBreakdown items={lastItems} />
+        </div>
+      )}
+    </div>
   )
 }

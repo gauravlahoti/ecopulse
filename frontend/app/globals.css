@@ -103,4 +103,75 @@
   .category-energy     { border-left: 3px solid #EAB308; }
   .category-shopping   { border-left: 3px solid #8B5CF6; }
   .category-travel     { border-left: 3px solid #3B82F6; }
+
+  /* ── Redesign utilities ─────────────────────────────────────────────── */
+
+  /* Fluid display headline — tuned so the default 100% zoom reads balanced
+     (not oversized) on typical 1440–1920px Windows/Chrome screens. */
+  .text-fluid-hero {
+    font-size: clamp(2.25rem, 4.6vw, 4rem);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .text-fluid-h2 {
+    font-size: clamp(1.6rem, 3.2vw, 2.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+
+  /* Cyan→lime→purple gradient text */
+  .text-gradient {
+    background-image: linear-gradient(105deg, #00F5D4 0%, #7CFFB2 42%, #7B61FF 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Hairline eyebrow label */
+  .eyebrow {
+    font-family: var(--font-jetbrains-mono), monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+  }
+
+  /* Fine dot grid backdrop */
+  .bg-dot-grid {
+    background-image: radial-gradient(circle, rgba(0, 245, 212, 0.45) 1px, transparent 1px);
+    background-size: 46px 46px;
+  }
+
+  /* Subtle film grain to kill banding on the dark gradients */
+  .bg-grain::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Animated shimmer fill (used on the "live" pill + buttons) */
+  .shimmer-fill {
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.14) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  /* Premium primary button */
+  .btn-primary {
+    position: relative;
+    background-image: linear-gradient(110deg, #00F5D4 0%, #7CFFB2 100%);
+    color: #05080F;
+    box-shadow: 0 0 0 1px rgba(0, 245, 212, 0.3), 0 12px 40px -12px rgba(0, 245, 212, 0.6);
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 1px rgba(0, 245, 212, 0.5), 0 18px 50px -10px rgba(0, 245, 212, 0.7);
+  }
 }

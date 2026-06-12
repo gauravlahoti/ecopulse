@@ -26,6 +26,11 @@
     "@lhci/cli": "^0.13.0",
     "husky": "^9.0.0"
   },
+  "//overrides": "Force a single React 19 across the whole workspace. Without this, npm hoists react@18 to the root and Next/framer-motion dedupe to it while the app uses react@19, causing element $$typeof mismatches (React error #31) during the production prerender.",
+  "overrides": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
   "engines": {
     "node": ">=22.0.0",
     "npm": ">=10.0.0"

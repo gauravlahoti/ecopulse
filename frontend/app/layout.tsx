@@ -26,7 +26,6 @@ export const metadata: Metadata = {
   description:
     'Fitbit for your carbon footprint. Snap a photo, see your CO₂e, get coached by AI.',
   manifest: '/manifest.json',
-  icons: { icon: '/favicon.ico' },
   openGraph: {
     title: 'EcoPulse',
     description: 'AI-powered carbon intelligence. Photo → CO₂e in <3 seconds.',
