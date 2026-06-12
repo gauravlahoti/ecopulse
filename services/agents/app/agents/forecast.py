@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import statistics
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.cache import get_cached_scenario, scenario_hash, set_cached_scenario
 from packages.emissions.engine import project_trajectory
@@ -77,7 +77,10 @@ def build_forecast(
     cached = get_cached_scenario(cache_key)
     if cached is not None:
         logger.debug("Forecast cache HIT for user %s, %d interventions", user_id, len(interventions))
-        return cached
+        # The cached trajectory is keyed on (user, interventions) and is
+        # label-independent — apply the requested label so "Current You" vs
+        # "Committed You" never collide on a shared cache entry.
+        return {**cached, "label": label}
 
     baseline = _baseline_monthly_avg(activity_history)
     monthly = project_trajectory(baseline, interventions)

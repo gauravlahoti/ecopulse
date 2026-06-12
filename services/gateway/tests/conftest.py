@@ -1,7 +1,8 @@
 """pytest fixtures for the gateway test suite."""
+from unittest.mock import MagicMock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock
 
 from app.main import app
 

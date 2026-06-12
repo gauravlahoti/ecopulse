@@ -1,7 +1,7 @@
 """Security headers and rate limiting middleware."""
 import time
 from collections import defaultdict
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware

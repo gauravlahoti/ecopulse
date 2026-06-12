@@ -17,10 +17,9 @@ import logging
 import os
 from typing import Any
 
-from pydantic import ValidationError
 
 from app.cache import get_cached_ingest, image_hash, set_cached_ingest
-from app.prompts.ingest_v1 import OUTPUT_SCHEMA, SYSTEM_PROMPT, USER_TEMPLATE
+from app.prompts.ingest_v1 import SYSTEM_PROMPT, USER_TEMPLATE
 
 logger = logging.getLogger(__name__)
 

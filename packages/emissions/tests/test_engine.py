@@ -37,7 +37,8 @@ class TestLoadFactors:
         for key, entry in factors.items():
             assert "co2e_per_unit" in entry, f"{key} missing co2e_per_unit"
             assert "unit" in entry, f"{key} missing unit"
-            assert float(entry["co2e_per_unit"]) > 0, f"{key} must have positive factor"
+            # Zero-carbon options (cycling, walking) are legitimately 0.0.
+            assert float(entry["co2e_per_unit"]) >= 0, f"{key} must have a non-negative factor"
 
     def test_lru_cache_returns_same_object(self) -> None:
         assert load_factors() is load_factors()

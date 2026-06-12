@@ -1,8 +1,8 @@
 """Activities CRUD — all routes require auth, all queries scoped to the authenticated user."""
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel
 
 from app.auth import AuthenticatedUID
 

@@ -2,9 +2,9 @@
 from typing import Annotated
 
 import firebase_admin
-from firebase_admin import auth, credentials
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from firebase_admin import auth
 
 # Initialize Firebase Admin SDK (uses Application Default Credentials in Cloud Run)
 if not firebase_admin._apps:

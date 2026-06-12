@@ -3,8 +3,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.middleware import SecurityHeadersMiddleware, RateLimitMiddleware
-from app.routes import health, activities, upload
+from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
+from app.routes import activities, health, upload
 
 app = FastAPI(
     title="EcoPulse Gateway",

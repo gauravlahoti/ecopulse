@@ -96,15 +96,24 @@ def _lookup_factor_key(item_name: str, category: str) -> str | None:
     if name_lower in factors:
         return name_lower
 
-    # 2. Alias match (O(n) but n ≈ 80 factors — acceptable)
+    # 2. Alias match — whole-word, longest-alias-wins. Substring matching would
+    #    wrongly map "car" → "carrot" (vegetables) or "oat milk" → dairy "milk";
+    #    word boundaries + preferring the longest alias avoid both. Mirrors the
+    #    TypeScript engine's lookupFactorKey (frontend/lib/emissions).
+    best_key: str | None = None
+    best_len = 0
     for key, entry in factors.items():
         aliases = entry.get("aliases", [])
         if isinstance(aliases, list):
             for alias in aliases:
-                if alias in name_lower or name_lower in alias:
-                    return key
+                if not isinstance(alias, str):
+                    continue
+                if re.search(rf"\b{re.escape(alias)}\b", name_lower) and len(alias) > best_len:
+                    best_key, best_len = key, len(alias)
+    if best_key is not None:
+        return best_key
 
-    # 3. Substring match on key itself
+    # 3. Substring match on the key's own stem (e.g. "electric…" → electricity_uk)
     for key in factors:
         if key.split("_")[0] in name_lower:
             return key
@@ -145,7 +154,6 @@ def calculate_co2e(item_name: str, quantity: float, unit: str, category: str) ->
 
     entry = factors[key]
     co2e_per_unit: float = float(entry["co2e_per_unit"])  # type: ignore[arg-type]
-    factor_unit: str = str(entry.get("unit", "kg"))
 
     # Normalise input quantity to factor's native unit
     normalised_qty = _normalise_unit(quantity, unit)

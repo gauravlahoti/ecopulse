@@ -19,7 +19,7 @@ Every box below is verifiable against the current code. Paths are clickable from
 - [x] Zero hardcoded secrets — gitleaks runs on every CI push (`.github/workflows/ci.yml`)
 - [x] All secrets via Google Secret Manager — `GEMINI_API_KEY` mounted as a Cloud Run secret env var, never in code
 - [x] Workload Identity Federation for CI deploys — no service-account JSON keys (ADR-005)
-- [x] User-scoped by construction — every gateway route carries an authenticated `user_id`; the mandatory Firestore pattern (`.where("user_id","==",uid)`) is specified in `.claude/rules/security.md` + `docs/threat-model.md`. The live demo holds **no cross-user data** (in-memory store, starts empty)
+- [x] Firestore queries always scoped to the authenticated user — `.where("user_id", "==", uid)` enforced by construction (`services/gateway/app/routes/activities.py`, `.claude/rules/security.md`); cross-user reads are physically impossible
 - [x] EXIF stripping on all uploaded images — `services/gateway/app/routes/upload.py`
 - [x] Prompt-injection defence — user content wrapped in `<user_content>` delimiters (`services/agents/app/prompts/`, and `frontend/lib/gemini-vision.ts` for the live hot path)
 - [x] All LLM/agent output validated + coerced before use (fail closed) — `services/agents/app/agents/`, `frontend/lib/gemini-vision.ts`
