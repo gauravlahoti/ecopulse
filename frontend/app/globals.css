@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base reset ─────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: #05080F;
+    color: #E8EDF5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-inter), sans-serif;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  /* Custom scrollbar — subtle dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #080C17;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 245, 212, 0.3);
+  }
+
+  /* Focus rings — neon-cyan, consistent everywhere */
+  :focus-visible {
+    outline: 2px solid #00F5D4;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Reduced motion — disable all transitions and animations */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ── Utility classes ─────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Glass card surface */
+  .glass {
+    background: rgba(13, 21, 38, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+
+  /* Neon text glow */
+  .text-glow-cyan {
+    text-shadow:
+      0 0 20px rgba(0, 245, 212, 0.6),
+      0 0 40px rgba(0, 245, 212, 0.3);
+  }
+
+  .text-glow-purple {
+    text-shadow:
+      0 0 20px rgba(123, 97, 255, 0.6),
+      0 0 40px rgba(123, 97, 255, 0.3);
+  }
+
+  /* Scanning line used in loading states */
+  .scanning-line {
+    position: absolute;
+    inset-inline: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00F5D4, transparent);
+    animation: scan 1.5s linear infinite;
+  }
+
+  /* Category left-border accents */
+  .category-food       { border-left: 3px solid #EF4444; }
+  .category-transport  { border-left: 3px solid #F97316; }
+  .category-energy     { border-left: 3px solid #EAB308; }
+  .category-shopping   { border-left: 3px solid #8B5CF6; }
+  .category-travel     { border-left: 3px solid #3B82F6; }
+}

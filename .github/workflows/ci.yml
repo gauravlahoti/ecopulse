@@ -1,0 +1,225 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: "22"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  # ─── Secrets gate (must pass before anything else) ────────────────────────
+  gitleaks:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─── Frontend pipeline ────────────────────────────────────────────────────
+  frontend-lint:
+    name: Frontend Lint & Type-Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run type-check
+
+  frontend-test:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    needs: frontend-lint
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run test:coverage
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          directory: frontend/coverage
+          flags: frontend
+      - name: Enforce coverage gate
+        run: |
+          COVERAGE=$(node -e "
+            const s = require('./coverage/coverage-summary.json');
+            console.log(s.total.lines.pct);
+          ")
+          echo "Coverage: ${COVERAGE}%"
+          node -e "process.exit(parseFloat('${COVERAGE}') < 85 ? 1 : 0)"
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+    needs: frontend-test
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Bundle size gate (<150KB initial JS)
+        run: |
+          node -e "
+            const fs = require('fs');
+            const path = '.next/static/chunks';
+            if (!fs.existsSync(path)) process.exit(0);
+            // Warn if any single page chunk exceeds 150KB
+            const files = fs.readdirSync(path).filter(f => f.endsWith('.js'));
+            let ok = true;
+            files.forEach(f => {
+              const size = fs.statSync(path + '/' + f).size;
+              if (size > 150 * 1024) {
+                console.error('OVERSIZED:', f, Math.round(size/1024) + 'KB');
+                ok = false;
+              }
+            });
+            process.exit(ok ? 0 : 1);
+          "
+
+  # ─── Accessibility gate ───────────────────────────────────────────────────
+  accessibility:
+    name: Accessibility (axe-core)
+    runs-on: ubuntu-latest
+    needs: frontend-build
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm run accessibility-audit
+
+  # ─── Gateway pipeline ─────────────────────────────────────────────────────
+  gateway-lint:
+    name: Gateway Lint & Type-Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check app/ tests/
+      - run: mypy --strict app/
+
+  gateway-test:
+    name: Gateway Tests
+    runs-on: ubuntu-latest
+    needs: gateway-lint
+    defaults:
+      run:
+        working-directory: services/gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest tests/ --cov=app --cov-report=xml --cov-fail-under=85
+      - uses: codecov/codecov-action@v4
+        with:
+          file: services/gateway/coverage.xml
+          flags: gateway
+
+  # ─── E2E (runs against built stack) ───────────────────────────────────────
+  e2e:
+    name: Playwright E2E
+    runs-on: ubuntu-latest
+    needs: [frontend-build, gateway-test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Start services
+        run: docker compose up -d frontend gateway
+        env:
+          GCP_PROJECT_ID: demo-ecopulse
+      - name: Wait for services
+        run: |
+          timeout 60 bash -c 'until curl -sf http://localhost:3000; do sleep 2; done'
+          timeout 60 bash -c 'until curl -sf http://localhost:8000/health; do sleep 2; done'
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+
+  # ─── Deploy (main branch only) ────────────────────────────────────────────
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    needs: [gitleaks, frontend-build, gateway-test, accessibility]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      id-token: write  # Required for Workload Identity Federation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Deploy Frontend
+        run: |
+          gcloud run deploy ecopulse-frontend \
+            --source ./frontend \
+            --region us-central1 \
+            --allow-unauthenticated \
+            --project ${{ secrets.GCP_PROJECT_ID }}
+      - name: Deploy Gateway
+        run: |
+          gcloud run deploy ecopulse-gateway \
+            --source ./services/gateway \
+            --region us-central1 \
+            --no-allow-unauthenticated \
+            --project ${{ secrets.GCP_PROJECT_ID }}
+      - name: Output URLs
+        run: |
+          echo "Frontend: $(gcloud run services describe ecopulse-frontend --region us-central1 --format 'value(status.url)')"
+          echo "Gateway: $(gcloud run services describe ecopulse-gateway --region us-central1 --format 'value(status.url)')"

@@ -1,0 +1,33 @@
+{
+  "name": "ecopulse",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspace=frontend",
+    "test": "npm run test --workspace=frontend",
+    "test:e2e": "playwright test",
+    "test:coverage": "npm run test:coverage --workspace=frontend",
+    "lint": "npm run lint --workspace=frontend && npm run lint:python",
+    "lint:python": "ruff check services/ packages/",
+    "type-check": "npm run type-check --workspace=frontend && mypy --strict services/ packages/schemas/",
+    "format": "npm run format --workspace=frontend && ruff format services/ packages/",
+    "lighthouse": "lhci autorun",
+    "evals": "python evals/eval_extraction.py"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "@playwright/test": "^1.44.0",
+    "@lhci/cli": "^0.13.0",
+    "husky": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}

@@ -1,0 +1,23 @@
+# Global owners — all PRs require review
+* @ecopulse-app/core
+
+# Frontend
+/frontend/ @ecopulse-app/frontend
+
+# Backend services
+/services/ @ecopulse-app/backend
+
+# AI agents (extra scrutiny for prompt changes)
+/services/agents/ @ecopulse-app/ai
+/services/agents/prompts/ @ecopulse-app/ai @ecopulse-app/core
+
+# Shared schemas (breaking changes affect everything)
+/packages/schemas/ @ecopulse-app/core
+
+# Infrastructure & CI
+/infra/ @ecopulse-app/infra
+/.github/ @ecopulse-app/infra
+
+# Security-sensitive files
+/docs/threat-model.md @ecopulse-app/core
+/.pre-commit-config.yaml @ecopulse-app/infra

@@ -1,0 +1,76 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+
+# Environment — NEVER commit real values
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Testing
+coverage/
+.nyc_output/
+htmlcov/
+.coverage
+.pytest_cache/
+test-results/
+playwright-report/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Docker
+*.log
+
+# Python virtual envs
+.venv/
+venv/
+env/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+
+# Ruff
+.ruff_cache/
+
+# Cloud
+.gcloud/
+service-account-key.json
+*-key.json
+
+# Secrets (belt-and-suspenders — gitleaks also catches these)
+*.pem
+*.p12
+*.pfx
+secrets.json
+credentials.json
+
+# Playwright
+/e2e/videos/
+/e2e/screenshots/
+
+# Eval artifacts
+evals/results/*.json
+
+# Lighthouse
+.lighthouseci/
