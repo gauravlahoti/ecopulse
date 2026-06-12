@@ -67,11 +67,3 @@ export type ChatMessage = {
   isStreaming?: boolean
   citedActivityIds?: string[]
 }
-
-export type Intervention = {
-  key: string
-  label: string
-  icon: string
-  saving_pct: number
-  active: boolean
-}

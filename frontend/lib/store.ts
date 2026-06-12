@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ActivityRecord, IdentifiedItem, ChatMessage, Intervention } from './types'
+import type { ActivityRecord, IdentifiedItem, ChatMessage } from './types'
 
 type AppState = {
   // Activities
@@ -7,7 +7,7 @@ type AppState = {
   totalCo2eKg: number
   isLoadingActivities: boolean
 
-  // Streaming (Snap-to-Carbon)
+  // Scan (Snap-to-Carbon)
   isSnapping: boolean
   /** When set, the scan overlay analyses this uploaded file instead of the live camera. */
   pendingPhoto: File | null
@@ -19,12 +19,6 @@ type AppState = {
   chatOpen: boolean
   chatMessages: ChatMessage[]
   chatStreaming: boolean
-
-  // Simulator
-  simulatorOpen: boolean
-  interventions: Intervention[]
-  currentScenarioCo2e: number[]
-  committedScenarioCo2e: number[]
 
   // Actions
   setActivities: (activities: ActivityRecord[]) => void
@@ -39,17 +33,7 @@ type AppState = {
   addChatMessage: (msg: ChatMessage) => void
   updateLastAssistantMessage: (content: string, done?: boolean) => void
   setChatStreaming: (streaming: boolean) => void
-  setSimulatorOpen: (open: boolean) => void
-  toggleIntervention: (key: string) => void
-  setScenarios: (current: number[], committed: number[]) => void
 }
-
-const DEFAULT_INTERVENTIONS: Intervention[] = [
-  { key: 'cycle_2x', label: 'Cycle 2×/week', icon: '🚲', saving_pct: 8, active: false },
-  { key: 'plant_meals', label: '2 plant meals/day', icon: '🥦', saving_pct: 12, active: false },
-  { key: 'no_short_haul', label: 'No short-haul flights', icon: '✈', saving_pct: 15, active: false },
-  { key: 'solar_tariff', label: 'Switch to solar tariff', icon: '☀', saving_pct: 6, active: false },
-]
 
 function calcTotal(activities: ActivityRecord[]): number {
   return activities.reduce((sum, a) => sum + a.co2e_kg, 0)
@@ -67,13 +51,8 @@ export const useStore = create<AppState>((set) => ({
   chatOpen: false,
   chatMessages: [],
   chatStreaming: false,
-  simulatorOpen: false,
-  interventions: DEFAULT_INTERVENTIONS,
-  currentScenarioCo2e: Array(12).fill(0) as number[],
-  committedScenarioCo2e: Array(12).fill(0) as number[],
 
-  setActivities: (activities) =>
-    set({ activities, totalCo2eKg: calcTotal(activities) }),
+  setActivities: (activities) => set({ activities, totalCo2eKg: calcTotal(activities) }),
 
   addActivity: (activity) =>
     set((s) => {
@@ -87,19 +66,16 @@ export const useStore = create<AppState>((set) => ({
 
   openScanWithPhoto: (file) => set({ isSnapping: true, pendingPhoto: file, streamingItems: [] }),
 
-  addStreamingItem: (item) =>
-    set((s) => ({ streamingItems: [...s.streamingItems, item] })),
+  addStreamingItem: (item) => set((s) => ({ streamingItems: [...s.streamingItems, item] })),
 
-  setSwapSuggestion: (suggestion, pct) =>
-    set({ swapSuggestion: suggestion, swapSavingPct: pct }),
+  setSwapSuggestion: (suggestion, pct) => set({ swapSuggestion: suggestion, swapSavingPct: pct }),
 
   clearSnap: () =>
     set({ isSnapping: false, pendingPhoto: null, streamingItems: [], swapSuggestion: null, swapSavingPct: null }),
 
   setChatOpen: (open) => set({ chatOpen: open }),
 
-  addChatMessage: (msg) =>
-    set((s) => ({ chatMessages: [...s.chatMessages, msg] })),
+  addChatMessage: (msg) => set((s) => ({ chatMessages: [...s.chatMessages, msg] })),
 
   updateLastAssistantMessage: (content, done = false) =>
     set((s) => {
@@ -112,16 +88,4 @@ export const useStore = create<AppState>((set) => ({
     }),
 
   setChatStreaming: (streaming) => set({ chatStreaming: streaming }),
-
-  setSimulatorOpen: (open) => set({ simulatorOpen: open }),
-
-  toggleIntervention: (key) =>
-    set((s) => ({
-      interventions: s.interventions.map((i) =>
-        i.key === key ? { ...i, active: !i.active } : i
-      ),
-    })),
-
-  setScenarios: (current, committed) =>
-    set({ currentScenarioCo2e: current, committedScenarioCo2e: committed }),
 }))

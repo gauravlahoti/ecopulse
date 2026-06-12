@@ -8,6 +8,9 @@ tell a friend ("paneer butter masala with 2 rotis", "Mumbai to Delhi by car"), a
 seconds you get an auditable carbon figure, a labelled breakdown of how it was derived, and an
 AI coach that recommends — from *your* data — how to cut it.
 
+🚀 **Live:** https://ecopulse-frontend-593919045544.us-central1.run.app
+(Next.js on Cloud Run · `GEMINI_API_KEY` via Secret Manager · publicly accessible)
+
 ---
 
 ## 1. The vertical — Sustainability / personal carbon footprint
@@ -16,6 +19,15 @@ People can't reduce what they can't measure, and existing trackers are either te
 (manual spreadsheets) or untrustworthy (black-box numbers). EcoPulse targets **everyday
 carbon awareness**: frictionless multimodal logging + transparent, science-backed numbers +
 personalised, AI-generated guidance.
+
+**Problem → how EcoPulse solves it:**
+
+| The problem | Our solution |
+|---|---|
+| Logging carbon is tedious | **Snap / Upload / Describe** — multimodal, ~3 s, no forms |
+| Tracker numbers are black boxes you can't trust | **Every figure shown as `quantity × DEFRA factor`** with source; LLM never does the math |
+| Generic advice doesn't fit the user | **AI Coach + Q&A grounded in the user's own logged data** |
+| AI "hallucinates" emission numbers | **Deterministic engine is authoritative**; unmatched items count as 0, never fabricated |
 
 ## 2. The core idea — *AI identifies, code calculates*
 
