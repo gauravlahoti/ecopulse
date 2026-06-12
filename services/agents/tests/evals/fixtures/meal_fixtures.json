@@ -1,0 +1,217 @@
+{
+  "_meta": {
+    "description": "Labeled meal fixtures for Ingest Agent eval suite",
+    "version": "1.0",
+    "accuracy_target": 0.90,
+    "notes": "Each fixture has expected items; evaluation checks name/category/unit coverage at ≥90%"
+  },
+  "fixtures": [
+    {
+      "id": "eval_001",
+      "input_type": "text",
+      "input": "I had a beef burger (150g patty) with fries and a diet coke",
+      "expected_items": [
+        {"name_contains": "beef",   "category": "food", "quantity_min": 100, "unit_type": "weight"},
+        {"name_contains": "fries",  "category": "food", "quantity_min": 50,  "unit_type": "weight"},
+        {"name_contains": "coke",   "category": "food", "quantity_min": 200, "unit_type": "volume"}
+      ],
+      "min_items": 2,
+      "expected_total_co2e_min_kg": 3.0
+    },
+    {
+      "id": "eval_002",
+      "input_type": "text",
+      "input": "Chicken Caesar salad with croutons and parmesan dressing for lunch",
+      "expected_items": [
+        {"name_contains": "chicken", "category": "food", "quantity_min": 80, "unit_type": "weight"},
+        {"name_contains": "salad",   "category": "food", "quantity_min": 50, "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 0.5
+    },
+    {
+      "id": "eval_003",
+      "input_type": "text",
+      "input": "Drove 25km to work in my petrol car this morning",
+      "expected_items": [
+        {"name_contains": "car",  "category": "transport", "quantity_min": 20, "unit_type": "distance"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 2.0
+    },
+    {
+      "id": "eval_004",
+      "input_type": "text",
+      "input": "Salmon fillet with steamed broccoli and quinoa",
+      "expected_items": [
+        {"name_contains": "salmon", "category": "food", "quantity_min": 100, "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 0.3
+    },
+    {
+      "id": "eval_005",
+      "input_type": "text",
+      "input": "Lamb chops (200g) with roast potatoes and mint sauce",
+      "expected_items": [
+        {"name_contains": "lamb", "category": "food", "quantity_min": 150, "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 5.0
+    },
+    {
+      "id": "eval_006",
+      "input_type": "text",
+      "input": "Oat milk latte and a croissant for breakfast",
+      "expected_items": [
+        {"name_contains": "oat",    "category": "food", "quantity_min": 100, "unit_type": "volume"},
+        {"name_contains": "crois",  "category": "food", "quantity_min": 40,  "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 0.1
+    },
+    {
+      "id": "eval_007",
+      "input_type": "text",
+      "input": "Took the train 80km from London to Cambridge",
+      "expected_items": [
+        {"name_contains": "train", "category": "transport", "quantity_min": 70, "unit_type": "distance"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 1.5
+    },
+    {
+      "id": "eval_008",
+      "input_type": "text",
+      "input": "Large pepperoni pizza (whole, 900g) for dinner",
+      "expected_items": [
+        {"name_contains": "pizza", "category": "food", "quantity_min": 500, "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 2.0
+    },
+    {
+      "id": "eval_009",
+      "input_type": "text",
+      "input": "Electric car journey 40km to the airport",
+      "expected_items": [
+        {"name_contains": "car", "category": "transport", "quantity_min": 30, "unit_type": "distance"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_max_kg": 5.0
+    },
+    {
+      "id": "eval_010",
+      "input_type": "text",
+      "input": "Grilled shrimp (120g) with pasta and garlic butter",
+      "expected_items": [
+        {"name_contains": "shrimp", "category": "food", "quantity_min": 80, "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 2.0
+    },
+    {
+      "id": "eval_011",
+      "input_type": "text",
+      "input": "Bowl of lentil soup with sourdough bread",
+      "expected_items": [
+        {"name_contains": "lentil", "category": "food", "quantity_min": 200, "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_max_kg": 1.5
+    },
+    {
+      "id": "eval_012",
+      "input_type": "text",
+      "input": "Long haul flight London to New York (5500km)",
+      "expected_items": [
+        {"name_contains": "flight", "category": "transport", "quantity_min": 5000, "unit_type": "distance"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 600.0
+    },
+    {
+      "id": "eval_013",
+      "input_type": "text",
+      "input": "100g dark chocolate bar",
+      "expected_items": [
+        {"name_contains": "chocolate", "category": "food", "quantity_min": 80, "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 1.0
+    },
+    {
+      "id": "eval_014",
+      "input_type": "text",
+      "input": "Spaghetti bolognese with 200g beef mince, tomato sauce, pasta",
+      "expected_items": [
+        {"name_contains": "beef",  "category": "food", "quantity_min": 150, "unit_type": "weight"},
+        {"name_contains": "pasta", "category": "food", "quantity_min": 80,  "unit_type": "weight"}
+      ],
+      "min_items": 2,
+      "expected_total_co2e_min_kg": 3.5
+    },
+    {
+      "id": "eval_015",
+      "input_type": "text",
+      "input": "Switched on the heating for 4 hours — natural gas boiler",
+      "expected_items": [
+        {"name_contains": "gas", "category": "energy", "quantity_min": 1, "unit_type": "energy"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 0.3
+    },
+    {
+      "id": "eval_016",
+      "input_type": "text",
+      "input": "Bought a new iPhone (smartphone)",
+      "expected_items": [
+        {"name_contains": "phone", "category": "shopping", "quantity_min": 1, "unit_type": "item"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 50.0
+    },
+    {
+      "id": "eval_017",
+      "input_type": "text",
+      "input": "Avocado toast with two poached eggs and spinach",
+      "expected_items": [
+        {"name_contains": "egg", "category": "food", "quantity_min": 1, "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 0.3
+    },
+    {
+      "id": "eval_018",
+      "input_type": "text",
+      "input": "Cycle commute 8km to office",
+      "expected_items": [
+        {"name_contains": "cycl", "category": "transport", "quantity_min": 5, "unit_type": "distance"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_max_kg": 0.01
+    },
+    {
+      "id": "eval_019",
+      "input_type": "text",
+      "input": "Glass of red wine (175ml) and cheese board (mixed, 80g)",
+      "expected_items": [
+        {"name_contains": "wine",   "category": "food", "quantity_min": 100, "unit_type": "volume"},
+        {"name_contains": "cheese", "category": "food", "quantity_min": 50,  "unit_type": "weight"}
+      ],
+      "min_items": 1,
+      "expected_total_co2e_min_kg": 0.5
+    },
+    {
+      "id": "eval_020",
+      "input_type": "text",
+      "input": "Full English breakfast: 2 eggs, 3 bacon rashers, 2 sausages, beans, toast",
+      "expected_items": [
+        {"name_contains": "egg",    "category": "food", "quantity_min": 1, "unit_type": "weight"},
+        {"name_contains": "bacon",  "category": "food", "quantity_min": 50,"unit_type": "weight"}
+      ],
+      "min_items": 2,
+      "expected_total_co2e_min_kg": 1.0
+    }
+  ]
+}

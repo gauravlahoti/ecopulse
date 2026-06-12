@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend
@@ -8,8 +8,8 @@ import {
 import { motion, useReducedMotion } from 'framer-motion'
 import dynamic from 'next/dynamic'
 import { GlassCard } from './ui/GlassCard'
-import { NeonButton } from './ui/NeonButton'
 import { useStore } from '@/lib/store'
+import { fetchForecast } from '@/lib/api'
 
 const GlobeScene = dynamic(
   () => import('./GlobeScene').then((m) => ({ default: m.GlobeScene })),
@@ -19,27 +19,40 @@ const GlobeScene = dynamic(
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export function ParallelYouSimulator() {
-  const { interventions, toggleIntervention, currentScenarioCo2e, committedScenarioCo2e, setScenarios } =
+  const { interventions, activities, toggleIntervention, currentScenarioCo2e, committedScenarioCo2e, setScenarios } =
     useStore()
   const [timelineIndex, setTimelineIndex] = useState(11)
+  const [isLoading, setIsLoading] = useState(false)
   const reducedMotion = useReducedMotion()
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const CURRENT: number[] = [85, 92, 110, 88, 76, 82, 79, 84, 91, 87, 95, 98]
-
-  const computeCommitted = useCallback((): number[] => {
-    const activeSavings = interventions.filter((i) => i.active).reduce((s, i) => s + i.saving_pct, 0)
-    const factor = 1 - Math.min(activeSavings, 80) / 100
-    return CURRENT.map((v, i) => Math.round(v * Math.max(factor - i * 0.008, 0.2) * 10) / 10)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interventions])
+  const loadForecast = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const activeKeys = interventions.filter((i) => i.active).map((i) => i.key)
+      const { current, committed } = await fetchForecast(activities, activeKeys)
+      setScenarios(current.monthly_co2e_kg as number[], committed.monthly_co2e_kg as number[])
+    } catch {
+      // Fallback to local calculation on API error
+      const baseline = 440
+      const activeSavings = interventions.filter((i) => i.active).reduce((s, i) => s + i.saving_pct, 0)
+      const factor = 1 - Math.min(activeSavings, 80) / 100
+      const current = Array(12).fill(baseline) as number[]
+      const committed = current.map((v, i) => Math.round(v * Math.max(factor - i * 0.005, 0.25) * 10) / 10)
+      setScenarios(current, committed)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [interventions, activities, setScenarios])
 
   useEffect(() => {
-    setScenarios(CURRENT, computeCommitted())
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interventions, computeCommitted])
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => { void loadForecast() }, 300)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [loadForecast])
 
-  const currentTotal = currentScenarioCo2e.reduce((s, v) => s + v, 0)
-  const committedTotal = committedScenarioCo2e.reduce((s, v) => s + v, 0)
+  const currentTotal = (currentScenarioCo2e as number[]).reduce((s, v) => s + v, 0)
+  const committedTotal = (committedScenarioCo2e as number[]).reduce((s, v) => s + v, 0)
   const savingPct = currentTotal > 0 ? Math.round((1 - committedTotal / currentTotal) * 100) : 0
 
   const chartData = MONTHS.map((month, i) => ({
@@ -64,7 +77,7 @@ export function ParallelYouSimulator() {
           Parallel-You Simulator
         </h2>
         <span className="font-mono text-xs text-neon-cyan bg-neon-cyan/10 border border-neon-cyan/20 px-2 py-1 rounded-full">
-          −{savingPct}% CO₂e
+          {isLoading ? '…' : `−${savingPct}% CO₂e`}
         </span>
       </div>
 

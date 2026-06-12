@@ -54,7 +54,7 @@ export function GlassCard({
           boxShadow: '0 0 30px rgba(0, 245, 212, 0.08)',
         }}
         transition={{ duration: 0.2 }}
-        {...(props as React.ComponentProps<typeof motion.div>)}
+        {...(props as unknown as React.ComponentProps<typeof motion.div>)}
       >
         {children}
       </motion.div>

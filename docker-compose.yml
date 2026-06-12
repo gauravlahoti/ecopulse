@@ -30,10 +30,31 @@ services:
       - FIRESTORE_EMULATOR_HOST=firestore:8080
       - REDIS_URL=redis://redis:6379
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
+      - AGENTS_URL=http://agents:8001
     volumes:
       - ./services/gateway:/app
     depends_on:
       - firestore
+      - redis
+      - agents
+    networks:
+      - ecopulse
+
+  agents:
+    build:
+      context: ./services/agents
+      dockerfile: Dockerfile
+      target: dev
+    ports:
+      - "8001:8001"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ENV=development
+    volumes:
+      - ./services/agents:/app
+      - ./packages:/app/packages
+    depends_on:
       - redis
     networks:
       - ecopulse

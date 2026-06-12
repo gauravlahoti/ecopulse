@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Globe } from '@/components/Globe'
 import { CarbonScore } from '@/components/CarbonScore'
 import { QuickLog } from '@/components/QuickLog'
@@ -42,11 +43,11 @@ export default function DashboardPage() {
 
         {/* ── Navigation header ─────────────────────────────────── */}
         <header className="glass border-b border-white/[0.07] px-4 py-3 flex items-center justify-between flex-shrink-0 z-30 sticky top-0">
-          <a href="/" aria-label="EcoPulse home" className="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-neon-cyan rounded-lg">
+          <Link href="/" aria-label="EcoPulse home" className="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-neon-cyan rounded-lg">
             <span className="font-display font-extrabold text-xl">
               Eco<span className="text-neon-cyan text-glow-cyan">Pulse</span>
             </span>
-          </a>
+          </Link>
 
           <nav aria-label="Dashboard navigation">
             <div className="flex gap-1 p-1 glass rounded-xl" role="tablist">

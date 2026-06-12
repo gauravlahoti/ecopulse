@@ -5,6 +5,11 @@ import type { ActivityRecord } from '@/lib/types'
 
 const PERIODS = ['TODAY', 'THIS WEEK', 'THIS MONTH', 'THIS YEAR'] as const
 
+const DAY = 86400000
+const WEEK = DAY * 7
+const MONTH = DAY * 30
+const YEAR = DAY * 365
+
 function getSeverityColor(co2eKg: number): string {
   if (co2eKg < 5) return 'text-carbon-low'
   if (co2eKg < 50) return 'text-carbon-mid'
@@ -24,10 +29,6 @@ type MetricStripProps = {
 
 export function MetricStrip({ activities }: MetricStripProps) {
   const now = Date.now()
-  const DAY = 86400000
-  const WEEK = DAY * 7
-  const MONTH = DAY * 30
-  const YEAR = DAY * 365
 
   const totals = useMemo(() => {
     const cutoffs = [now - DAY, now - WEEK, now - MONTH, now - YEAR]

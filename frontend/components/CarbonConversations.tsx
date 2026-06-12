@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect, useId } from 'react'
+import { useState, useRef, useEffect, useId, useCallback } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { GlassCard } from './ui/GlassCard'
 import { NeonButton } from './ui/NeonButton'
 import { useStore } from '@/lib/store'
+import { useSSEStream } from '@/lib/sse'
+import type { AgentStreamEvent } from '@/lib/types'
 
 const SUGGESTED_QUESTIONS = [
   'Why was last month so high?',
@@ -13,7 +15,7 @@ const SUGGESTED_QUESTIONS = [
 ]
 
 export function CarbonConversations() {
-  const { chatOpen, chatMessages, chatStreaming, setChatOpen, addChatMessage, updateLastAssistantMessage, setChatStreaming } =
+  const { chatOpen, chatMessages, chatStreaming, activities, setChatOpen, addChatMessage, updateLastAssistantMessage, setChatStreaming } =
     useStore()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -21,6 +23,7 @@ export function CarbonConversations() {
   const reducedMotion = useReducedMotion()
   const panelId = useId()
   const headingId = useId()
+  const { stream, abort } = useSSEStream()
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -32,39 +35,51 @@ export function CarbonConversations() {
     if (chatOpen) inputRef.current?.focus()
   }, [chatOpen])
 
-  async function sendMessage(text: string) {
+  const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || chatStreaming) return
     setInput('')
 
+    // Build session history for context
+    const sessionHistory = chatMessages.slice(-6).map((m) => ({ role: m.role, content: m.content }))
+
     addChatMessage({ id: `user-${Date.now()}`, role: 'user', content: text })
-    addChatMessage({ id: `ai-${Date.now()}`, role: 'assistant', content: '', isStreaming: true, agent: 'Analyst Agent' })
+    addChatMessage({ id: `ai-${Date.now()}`, role: 'assistant', content: '', isStreaming: true, agent: 'Carbon AI' })
     setChatStreaming(true)
 
-    // Simulated SSE streaming — Sprint 3 wires to real gateway
-    const MOCK = 'Based on your data, your March footprint spike was driven primarily by the LHR→JFK flight (430 kg CO₂e), which alone accounted for ~40% of your monthly total. Your food choices that month were actually below average — the flight is the single highest-leverage item to address.'
-    let i = 0
-    const interval = setInterval(() => {
-      if (i >= MOCK.length) {
-        clearInterval(interval)
+    await stream(
+      '/api/v1/chat',
+      { body: { message: text, relevant_activities: activities.slice(0, 20), session_history: sessionHistory } },
+      (event: AgentStreamEvent) => {
+        if (event.type === 'token') {
+          updateLastAssistantMessage(event.content)
+        }
+      },
+      () => {
         updateLastAssistantMessage('', true)
         setChatStreaming(false)
-        return
-      }
-      updateLastAssistantMessage(MOCK[i] ?? '')
-      i++
-    }, reducedMotion ? 0 : 18)
-  }
+      },
+      () => {
+        updateLastAssistantMessage(' (error — please try again)', true)
+        setChatStreaming(false)
+      },
+    )
+  }, [chatStreaming, chatMessages, activities, stream, addChatMessage, updateLastAssistantMessage, setChatStreaming])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     void sendMessage(input)
   }
 
+  function handleClose() {
+    abort()
+    setChatOpen(false)
+  }
+
   return (
     <>
       {/* Floating Action Button */}
       <motion.button
-        onClick={() => setChatOpen(!chatOpen)}
+        onClick={() => chatOpen ? handleClose() : setChatOpen(true)}
         aria-expanded={chatOpen}
         aria-controls={panelId}
         aria-label={chatOpen ? 'Close Carbon AI chat' : 'Open Carbon AI chat'}
@@ -101,7 +116,7 @@ export function CarbonConversations() {
                   </h2>
                 </div>
                 <button
-                  onClick={() => setChatOpen(false)}
+                  onClick={handleClose}
                   aria-label="Close chat panel"
                   className="text-text-muted hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neon-purple rounded p-0.5"
                 >

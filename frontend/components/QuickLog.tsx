@@ -1,42 +1,54 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { GlassCard } from './ui/GlassCard'
 import { NeonButton } from './ui/NeonButton'
 import { useStore } from '@/lib/store'
+import { useSSEStream } from '@/lib/sse'
+import type { AgentStreamEvent } from '@/lib/types'
 
 type Mode = 'idle' | 'camera' | 'text' | 'file'
 
 export function QuickLog() {
   const [mode, setMode] = useState<Mode>('idle')
   const [textInput, setTextInput] = useState('')
+  const [isAnalysing, setIsAnalysing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const reducedMotion = useReducedMotion()
-  const { setIsSnapping, addActivity } = useStore()
+  const { setIsSnapping, addActivity, addStreamingItem, setSwapSuggestion, clearSnap } = useStore()
+  const { stream, abort } = useSSEStream()
 
   function handleSnapClick() {
     setMode('camera')
     setIsSnapping(true)
   }
 
-  function handleTextSubmit(e: React.FormEvent) {
+  const handleTextSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!textInput.trim()) return
-    // Optimistic add — in Sprint 3 this calls the agent
-    addActivity({
-      id: `opt-${Date.now()}`,
-      user_id: 'demo-user',
-      category: 'other',
-      description: textInput.trim(),
-      co2e_kg: 0,
-      items: [],
-      timestamp: new Date().toISOString(),
-      source_type: 'text',
-    })
+    const text = textInput.trim()
+    if (!text || isAnalysing) return
     setTextInput('')
+    setIsAnalysing(true)
+
+    await stream(
+      '/api/v1/ingest/text',
+      { body: { text } },
+      (event: AgentStreamEvent) => {
+        if (event.type === 'item_identified') {
+          addStreamingItem({ ...event.item, co2e_kg: event.co2e_kg })
+        } else if (event.type === 'swap_suggestion') {
+          setSwapSuggestion(event.suggestion, event.saving_pct)
+        } else if (event.type === 'activity_complete') {
+          addActivity(event.activity)
+          clearSnap()
+        }
+      },
+      () => setIsAnalysing(false),
+      () => setIsAnalysing(false),
+    )
     setMode('idle')
-  }
+  }, [textInput, isAnalysing, stream, addStreamingItem, setSwapSuggestion, addActivity, clearSnap])
 
   function handleFileDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
@@ -45,7 +57,6 @@ export function QuickLog() {
   }
 
   function handleFileUpload(file: File) {
-    // Optimistic — Sprint 3 wires to gateway upload endpoint
     addActivity({
       id: `opt-${Date.now()}`,
       user_id: 'demo-user',
@@ -80,7 +91,7 @@ export function QuickLog() {
         <NeonButton
           size="sm"
           variant={mode === 'text' ? 'solid' : 'cyan'}
-          onClick={() => setMode(mode === 'text' ? 'idle' : 'text')}
+          onClick={() => { abort(); setMode(mode === 'text' ? 'idle' : 'text') }}
           aria-pressed={mode === 'text'}
           aria-expanded={mode === 'text'}
         >
@@ -108,7 +119,7 @@ export function QuickLog() {
             transition={spring}
             className="overflow-hidden"
           >
-            <form onSubmit={handleTextSubmit} className="flex gap-2">
+            <form onSubmit={(e) => { void handleTextSubmit(e) }} className="flex gap-2">
               <label htmlFor="activity-text" className="sr-only">
                 Describe your activity (e.g. &quot;drove 20km&quot;, &quot;beef burger&quot;)
               </label>
@@ -119,10 +130,11 @@ export function QuickLog() {
                 onChange={(e) => setTextInput(e.target.value)}
                 placeholder='e.g. "beef burger lunch" or "drove 20km"'
                 className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/30"
+                // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
               />
-              <NeonButton type="submit" size="sm" variant="solid" disabled={!textInput.trim()}>
-                Log
+              <NeonButton type="submit" size="sm" variant="solid" disabled={!textInput.trim() || isAnalysing}>
+                {isAnalysing ? '…' : 'Log'}
               </NeonButton>
             </form>
           </motion.div>

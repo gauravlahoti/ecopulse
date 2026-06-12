@@ -97,18 +97,21 @@ export function CameraOverlay({ onClose }: CameraOverlayProps) {
 
   function logActivity(useSwap: boolean) {
     const total = streamingItems.reduce((s, i) => s + i.co2e_kg, 0)
-    addActivity({
+    const base = {
       id: `snap-${Date.now()}`,
       user_id: 'demo-user',
-      category: 'food',
+      category: 'food' as const,
       description: useSwap && swapSuggestion ? swapSuggestion : streamingItems.map((i) => i.name).join(', '),
       co2e_kg: useSwap ? total * (1 - (swapSavingPct ?? 0) / 100) : total,
       items: streamingItems,
-      swap_suggestion: swapSuggestion ?? undefined,
-      swap_co2e_saving_pct: swapSavingPct ?? undefined,
       timestamp: new Date().toISOString(),
       source_type: 'photo',
-    })
+    }
+    addActivity(
+      swapSuggestion && swapSavingPct !== null
+        ? { ...base, swap_suggestion: swapSuggestion, swap_co2e_saving_pct: swapSavingPct }
+        : base
+    )
     handleClose()
   }
 
@@ -199,7 +202,7 @@ export function CameraOverlay({ onClose }: CameraOverlayProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={captured}
-              alt="Captured meal photo for carbon analysis"
+              alt="Captured meal for carbon analysis"
               className="w-full max-h-48 object-cover opacity-60"
             />
 

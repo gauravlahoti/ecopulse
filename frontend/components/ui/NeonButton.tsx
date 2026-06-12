@@ -47,7 +47,7 @@ export function NeonButton({
         whileHover={{ translateY: variant === 'solid' ? -1 : 0 }}
         whileTap={{ scale: 0.97 }}
         transition={{ duration: 0.15 }}
-        {...(props as React.ComponentProps<typeof motion.button>)}
+        {...(props as unknown as React.ComponentProps<typeof motion.button>)}
       >
         {children}
       </motion.button>
